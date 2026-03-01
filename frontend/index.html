@@ -1,71 +1,39 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Habit Power</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-      body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: linear-gradient(135deg,#4f46e5,#9333ea);
-        color: white;
-      }
-      .container { padding: 20px; }
-      .card {
-        background: rgba(255,255,255,0.1);
-        padding: 16px;
-        border-radius: 16px;
-        margin-bottom: 15px;
-        cursor: pointer;
-      }
-      .title { font-size: 20px; font-weight: bold; }
-      .points { font-size: 18px; margin-top: 10px; }
-      button {
-        padding: 10px 16px;
-        border-radius: 12px;
-        border: none;
-        cursor: pointer;
-        margin-top: 10px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="title">Habit Power</div>
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-      <div class="card" onclick="addHabit()">
-        ➕ Добавить привычку
-      </div>
+const user = tg.initDataUnsafe?.user;
 
-      <div class="card" onclick="addPoints()">
-        ✅ Отметить выполнение
-      </div>
+let pointsEl = document.getElementById("points");
 
-      <div class="card">
-        🏆 Очки: <span id="points">0</span>
-      </div>
+async function loadUser() {
+  if (!user) return;
 
-      <div class="card">
-        📊 Рейтинг (заглушка)
-      </div>
-    </div>
+  const res = await fetch("/api/user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegram_id: user.id,
+      username: user.username || ""
+    })
+  });
 
-    <script>
-      const tg = window.Telegram.WebApp;
-      tg.expand();
+  const data = await res.json();
+  pointsEl.innerText = data.points;
+}
 
-      let points = 0;
+async function addPoints() {
+  const res = await fetch("/api/add-points", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegram_id: user.id
+    })
+  });
 
-      function addHabit() {
-        alert("Привычка добавлена (пока демо)");
-      }
+  const data = await res.json();
+  pointsEl.innerText = data.points;
+}
 
-      function addPoints() {
-        points += 10;
-        document.getElementById("points").innerText = points;
-      }
-    </script>
-  </body>
-</html>
+loadUser();
+</script>

@@ -82,3 +82,67 @@ async def leaderboard():
             rank += 1
 
         return leaderboard_data
+
+from .models import Habit
+from datetime import date
+
+@app.post("/api/add-habit")
+async def add_habit(request: Request):
+    data = await request.json()
+    telegram_id = str(data["telegram_id"])
+    name = data["name"]
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one()
+
+        habit = Habit(user_id=user.id, name=name, streak=0)
+        session.add(habit)
+        await session.commit()
+
+        return {"status": "ok"}
+
+
+@app.get("/api/habits/{telegram_id}")
+async def get_habits(telegram_id: str):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one()
+
+        result = await session.execute(
+            select(Habit).where(Habit.user_id == user.id)
+        )
+        habits = result.scalars().all()
+
+        return [
+            {"id": h.id, "name": h.name, "streak": h.streak}
+            for h in habits
+        ]
+
+
+@app.post("/api/complete-habit")
+async def complete_habit(request: Request):
+    data = await request.json()
+    habit_id = data["habit_id"]
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Habit).where(Habit.id == habit_id)
+        )
+        habit = result.scalar_one()
+
+        habit.streak += 1
+
+        result = await session.execute(
+            select(User).where(User.id == habit.user_id)
+        )
+        user = result.scalar_one()
+        user.points += 10
+
+        await session.commit()
+
+        return {"points": user.points, "streak": habit.streak}

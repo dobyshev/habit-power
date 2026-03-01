@@ -24,3 +24,39 @@ from fastapi.responses import FileResponse
 @app.get("/app")
 async def web_app():
     return FileResponse("frontend/index.html")
+
+from fastapi import Request
+from sqlalchemy import select
+from .database import AsyncSessionLocal
+from .models import User
+
+@app.post("/api/user")
+async def create_or_get_user(request: Request):
+    data = await request.json()
+    telegram_id = str(data["telegram_id"])
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            user = User(telegram_id=telegram_id, points=0)
+            session.add(user)
+            await session.commit()
+
+        return {"points": user.points}
+
+
+@app.post("/api/add-points")
+async def add_points(request: Request):
+    data = await request.json()
+    telegram_id = str(data["telegram_id"])
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = result.scalar_one()
+
+        user.points += 10
+        await session.commit()
+
+        return {"points": user.points}

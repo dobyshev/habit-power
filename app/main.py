@@ -18,3 +18,9 @@ async def on_startup():
 @app.get("/")
 async def root():
     return {"status": "Habit Power backend running"}
+
+from fastapi.responses import FileResponse
+
+@app.get("/app")
+async def web_app():
+    return FileResponse("frontend/index.html")

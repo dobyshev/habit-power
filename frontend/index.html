@@ -34,7 +34,9 @@
     🏆 Очки: <span id="points">0</span>
   </div>
 </div>
+<div class="card" onclick="showLeaderboard()">🏆 Рейтинг</div>
 
+<div id="leaderboard" style="margin-top:15px;"></div>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -76,7 +78,21 @@ document.addEventListener("DOMContentLoaded", function() {
     const data = await res.json();
     pointsEl.innerText = data.points;
   };
+window.showLeaderboard = async function() {
+  const res = await fetch("/api/leaderboard");
+  const data = await res.json();
 
+  let html = "<div class='card'><b>🏆 Таблица лидеров</b><br><br>";
+
+  data.forEach(user => {
+    html += `#${user.rank} — ${user.points} очков<br>`;
+  });
+
+  html += "</div>";
+
+  document.getElementById("leaderboard").innerHTML = html;
+};
+  
   loadUser();
 
 });

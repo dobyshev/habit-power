@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Date
 from .database import Base
 
 class User(Base):
-    tablename = "users"
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
     telegram_id = Column(String, unique=True)
@@ -19,7 +19,7 @@ class Habit(Base):
 
 
 class Completion(Base):
-    tablename = "completions"
+    __tablename__ = "completions"
 
     id = Column(Integer, primary_key=True)
     habit_id = Column(Integer, ForeignKey("habits.id"))

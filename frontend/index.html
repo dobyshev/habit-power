@@ -29,6 +29,14 @@
   <div class="title">Habit Power</div>
 
   <div class="card" onclick="addPoints()">✅ Отметить выполнение</div>
+  
+  <div class="card">
+  <input id="habitInput" placeholder="Новая привычка"
+         style="padding:8px;border-radius:8px;border:none;width:100%;">
+  <button onclick="addHabit()" style="margin-top:8px;">Добавить</button>
+</div>
+
+<div id="habitsList"></div>
 
   <div class="card">
     🏆 Очки: <span id="points">0</span>
@@ -92,8 +100,61 @@ window.showLeaderboard = async function() {
 
   document.getElementById("leaderboard").innerHTML = html;
 };
+
+window.addHabit = async function() {
+  const input = document.getElementById("habitInput");
+  const name = input.value;
+
+  if (!name) return;
+
+  await fetch("/api/add-habit", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      telegram_id: telegramUser.id,
+      name: name
+    })
+  });
+
+  input.value = "";
+  loadHabits();
+};
+
+async function loadHabits() {
+  if (!telegramUser) return;
+
+  const res = await fetch(`/api/habits/${telegramUser.id}`);
+  const habits = await res.json();
+
+  let html = "";
+
+  habits.forEach(habit => {
+    html += `
+      <div class="card">
+        ${habit.name} 🔥 ${habit.streak}
+        <button onclick="completeHabit(${habit.id})">✅</button>
+      </div>
+    `;
+  });
+
+  document.getElementById("habitsList").innerHTML = html;
+}
+
+window.completeHabit = async function(id) {
+  const res = await fetch("/api/complete-habit", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({habit_id: id})
+  });
+
+  const data = await res.json();
+  document.getElementById("points").innerText = data.points;
+
+  loadHabits();
+};
   
   loadUser();
+loadHabits();
 
 });
 </script>

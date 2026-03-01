@@ -60,3 +60,25 @@ async def add_points(request: Request):
         await session.commit()
 
         return {"points": user.points}
+
+from sqlalchemy import select, desc
+
+@app.get("/api/leaderboard")
+async def leaderboard():
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).order_by(desc(User.points))
+        )
+        users = result.scalars().all()
+
+        leaderboard_data = []
+        rank = 1
+        for user in users:
+            leaderboard_data.append({
+                "rank": rank,
+                "telegram_id": user.telegram_id,
+                "points": user.points
+            })
+            rank += 1
+
+        return leaderboard_data

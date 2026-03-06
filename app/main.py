@@ -98,6 +98,15 @@ async def add_habit(request: Request):
         )
         user = result.scalar_one()
 
+        # проверяем количество привычек
+result = await session.execute(
+    select(Habit).where(Habit.user_id == user.id)
+)
+habits = result.scalars().all()
+
+if len(habits) >= 10:
+    return {"error": "limit_reached"}
+
         habit = Habit(user_id=user.id, name=name, streak=0)
         session.add(habit)
         await session.commit()
@@ -135,6 +144,21 @@ async def complete_habit(request: Request):
         )
         habit = result.scalar_one()
 
+        from datetime import date
+today = date.today()
+
+result = await session.execute(
+    select(Completion).where(
+        Completion.habit_id == habit_id,
+        Completion.date == today
+    )
+)
+
+already_done = result.scalar_one_or_none()
+
+if already_done:
+    return {"error": "already_completed"}
+
         habit.streak += 1
 
         result = await session.execute(
@@ -146,3 +170,19 @@ async def complete_habit(request: Request):
         await session.commit()
 
         return {"points": user.points, "streak": habit.streak}
+
+@app.post("/api/delete-habit")
+async def delete_habit(request: Request):
+    data = await request.json()
+    habit_id = data["habit_id"]
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Habit).where(Habit.id == habit_id)
+        )
+        habit = result.scalar_one()
+
+        await session.delete(habit)
+        await session.commit()
+
+        return {"status": "deleted"}

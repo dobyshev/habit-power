@@ -107,9 +107,9 @@ habits = result.scalars().all()
 if len(habits) >= 10:
     return {"error": "limit_reached"}
 
-        habit = Habit(user_id=user.id, name=name, streak=0)
-        session.add(habit)
-        await session.commit()
+habit = Habit(user_id=user.id, name=name, streak=0)
+session.add(habit)
+await session.commit()
 
         return {"status": "ok"}
 

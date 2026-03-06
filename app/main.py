@@ -185,4 +185,4 @@ async def delete_habit(request: Request):
         await session.delete(habit)
         await session.commit()
 
-    return {"status": "ok"}
+        return {"status": "ok"}

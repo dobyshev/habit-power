@@ -111,7 +111,7 @@ habit = Habit(user_id=user.id, name=name, streak=0)
 session.add(habit)
 await session.commit()
 
-        return {"status": "ok"}
+return {"status": "ok"}
 
 
 @app.get("/api/habits/{telegram_id}")

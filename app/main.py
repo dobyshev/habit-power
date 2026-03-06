@@ -159,17 +159,17 @@ already_done = result.scalar_one_or_none()
 if already_done:
     return {"error": "already_completed"}
 
-        habit.streak += 1
+habit.streak += 1
 
-        result = await session.execute(
-            select(User).where(User.id == habit.user_id)
-        )
-        user = result.scalar_one()
-        user.points += 10
+result = await session.execute(
+    select(User).where(User.id == habit.user_id)
+)
+user = result.scalar_one()
+user.points += 10
 
-        await session.commit()
+await session.commit()
 
-        return {"points": user.points, "streak": habit.streak}
+return {"points": user.points, "streak": habit.streak}
 
 @app.post("/api/delete-habit")
 async def delete_habit(request: Request):

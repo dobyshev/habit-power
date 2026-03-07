@@ -12,11 +12,10 @@ from fastapi.responses import FileResponse
 
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 
-
 @app.get("/app")
 async def web_app():
-    return FileResponse("app/frontend/index.html")
-
+    return FileResponse("frontend/index.html")
+    
 @app.get("/")
 async def root():
     return {"status": "ok"}

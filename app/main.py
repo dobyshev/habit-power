@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, select, delete
 from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, select, delete
 from datetime import date
 
-DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
+DATABASE_URL = "sqlite+aiosqlite:///./habits.db"
 
-engine = create_async_engine(DATABASE_URL)
+engine = create_async_engine(DATABASE_URL, echo=False)
 
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -15,7 +15,7 @@ Base = declarative_base()
 
 app = FastAPI()
 
-# ---------- МОДЕЛИ ----------
+# ---------------- MODELS ----------------
 
 class Habit(Base):
     __tablename__ = "habits"
@@ -28,13 +28,23 @@ class Habit(Base):
 
 
 class Completion(Base):
-    __tablename__ = "completions"
+   , Integer, Stri= "completions"
 
     id = Column(Integer, primary_key=True)
     habit_id = Column(Integer, ForeignKey("habits.id"))
     date = Column(Date)
 
-# ---------- API ----------
+
+# ---------------- CREATE TABLES ----------------
+
+@app.on_event("startup")
+async def startup():
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+# ---------------- USER ----------------
 
 @app.post("/api/user")
 async def get_user(data: dict):
@@ -53,6 +63,8 @@ async def get_user(data: dict):
 
         return {"points": total_points}
 
+
+# ---------------- ADD HABIT ----------------
 
 @app.post("/api/add-habit")
 async def add_habit(data: dict):
@@ -85,6 +97,8 @@ async def add_habit(data: dict):
     return {"status": "added"}
 
 
+# ---------------- GET HABITS ----------------
+
 @app.get("/api/habits/{telegram_id}")
 async def get_habits(telegram_id: int):
 
@@ -106,6 +120,8 @@ async def get_habits(telegram_id: int):
             for h in habits
         ]
 
+
+# ---------------- COMPLETE HABIT ----------------
 
 @app.post("/api/complete-habit")
 async def complete_habit(data: dict):
@@ -145,6 +161,8 @@ async def complete_habit(data: dict):
         return {"points": habit.points}
 
 
+# ---------------- DELETE HABIT ----------------
+
 @app.post("/api/delete-habit")
 async def delete_habit(data: dict):
 
@@ -160,10 +178,10 @@ async def delete_habit(data: dict):
             delete(Habit).where(Habit.id == habit_id)
         )
 
-        await session.commit()
+        return {"status": "deleted"}
 
-    return {"status": "deleted"}
 
+# ---------------- LEADERBOARD ----------------
 
 @app.get("/api/leaderboard")
 async def leaderboard():
@@ -193,6 +211,8 @@ async def leaderboard():
         return result
 
 
-# ---------- СТАТИКА ----------
+# ---------------- FRONTEND ----------------
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
+        await session.commit()

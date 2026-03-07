@@ -6,3 +6,4 @@ sqlalchemy
 apscheduler
 python-dotenv
 psycopg2-binary
+aiosqlite

@@ -23,7 +23,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 
-# Fix для postgres:// от Render
+# Fix Render postgres:// → postgresql+psycopg2://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 elif DATABASE_URL.startswith("postgresql://"):
@@ -108,7 +108,7 @@ class HabitOut(BaseModel):
     completed_today: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class HabitsResponse(BaseModel):
@@ -121,7 +121,7 @@ class LeaderboardUser(BaseModel):
     points: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # -----------------------------

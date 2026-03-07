@@ -1,27 +1,19 @@
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, create_engine
+from sqlalchemy import Column, Integer, String, Date, create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import date
 import os
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-Base = declarative_base()
-
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
+
+Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -30,25 +22,35 @@ class User(Base):
     telegram_id = Column(String, unique=True)
     points = Column(Integer, default=0)
 
+
 class Habit(Base):
-   Integer, String= "habits"
+   rt sessionmaker= "habits"
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
     name = Column(String)
     streak = Column(Integer, default=0)
 
+
 class Completion(Base):
-    Date, ForeignK= "completions"
+    declarative_ba= "completions"
 
     id = Column(Integer, primary_key=True)
     habit_id = Column(Integer)
     date = Column(Date)
 
+
 Base.metadata.create_all(engine)
 
+
+@app.get("/api/test")
+def test():
+    return {"status": "ok"}
+
+
 @app.post("/api/user")
-async def create_user(data: dict):
+def create_user(data: dict):
+
     session = SessionLocal()
 
     user = session.query(User).filter_by(
@@ -63,12 +65,16 @@ async def create_user(data: dict):
         session.add(user)
         session.commit()
 
+    points = user.points
+
     session.close()
 
-    return {"points": user.points}
+    return {"points": points}
+
 
 @app.get("/api/habits/{telegram_id}")
-async def get_habits(telegram_id: str):
+def get_habits(telegram_id: str):
+
     session = SessionLocal()
 
     user = session.query(User).filter_by(
@@ -92,8 +98,9 @@ async def get_habits(telegram_id: str):
 
     return result
 
+
 @app.post("/api/add-habit")
-async def add_habit(data: dict):
+def add_habit(data: dict):
 
     session = SessionLocal()
 
@@ -115,12 +122,14 @@ async def add_habit(data: dict):
 
     session.add(habit)
     session.commit()
+
     session.close()
 
     return {"success": True}
 
+
 @app.post("/api/delete-habit")
-async def delete_habit(data: dict):
+def delete_habit(data: dict):
 
     session = SessionLocal()
 
@@ -133,12 +142,14 @@ async def delete_habit(data: dict):
     ).delete()
 
     session.commit()
+
     session.close()
 
     return {"success": True}
 
+
 @app.post("/api/complete-habit")
-async def complete_habit(data: dict):
+def complete_habit(data: dict):
 
     session = SessionLocal()
 
@@ -173,32 +184,11 @@ async def complete_habit(data: dict):
 
     session.commit()
 
-    session.close()
-
-    return {"points": user.points}
-
-@app.get("/api/leaderboard")
-async def leaderboard():
-
-    session = SessionLocal()
-
-    users = session.query(User).order_by(
-        User.points.desc()
-    ).limit(10).all()
-
-    result = []
-
-    rank = 1
-
-    for u in users:
-        result.append({
-            "rank": rank,
-            "points": u.points
-        })
-        rank += 1
+    points = user.points
 
     session.close()
 
-    return result
+    return {"points": points}
+
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

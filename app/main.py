@@ -63,8 +63,7 @@ class Habit(Base):
 
 
 class Completion(Base):
-   
-# ------------= "completions"
+    __tablename__ = "completions"
 
     id = Column(Integer, primary_key=True, index=True)
     habit_id = Column(Integer, ForeignKey("habits.id", ondelete="CASCADE"), nullable=False)
@@ -72,8 +71,7 @@ class Completion(Base):
 
     habit = relationship("Habit", back_populates="completions")
 
-       Column,
-    = (
+    __table_args__ = (
         UniqueConstraint("habit_id", "date", name="uq_habit_date"),
     )
 
@@ -130,7 +128,6 @@ class LeaderboardUser(BaseModel):
 
 app = FastAPI(title="Habit Power API")
 
-# CORS (на будущее, если понадобится)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -317,5 +314,4 @@ def leaderboard(db: Session = Depends(get_db)):
 # Static frontend
 # -----------------------------
 
-# Монтируем ПОСЛЕ API, чтобы /api/... не перехватывалось статиками
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

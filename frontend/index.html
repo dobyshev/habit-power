@@ -129,29 +129,81 @@ async function loadHabits() {
   let html = "";
 
   habits.forEach(habit => {
-    html += `
-      <div class="card">
-        ${habit.name} 🔥 ${habit.streak}
-        <button onclick="completeHabit(${habit.id})">✅</button>
-      </div>
-    `;
-  });
 
+let emoji = "⭐"
+
+if(habit.name.toLowerCase().includes("run")) emoji = "🏃"
+if(habit.name.toLowerCase().includes("read")) emoji = "📚"
+if(habit.name.toLowerCase().includes("water")) emoji = "💧"
+if(habit.name.toLowerCase().includes("workout")) emoji = "🏋️"
+if(habit.name.toLowerCase().includes("code")) emoji = "💻"
+
+html += `
+<div class="card">
+
+<div style="display:flex;justify-content:space-between;align-items:center">
+
+<div>
+${emoji} ${habit.name} 🔥 ${habit.streak}
+</div>
+
+<div>
+
+<button onclick="completeHabit(${habit.id})" 
+style="background:#2ecc71;border:none;padding:6px 10px;border-radius:6px;color:white;margin-right:6px">
+✔
+</button>
+
+<button onclick="deleteHabit(${habit.id})"
+style="background:#e74c3c;border:none;padding:6px 10px;border-radius:6px;color:white">
+🗑
+</button>
+
+</div>
+
+</div>
+
+</div>
+`
+
+})
   document.getElementById("habitsList").innerHTML = html;
 }
 
-window.completeHabit = async function(id) {
-  const res = await fetch("/api/complete-habit", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({habit_id: id})
-  });
+window.completeHabit = async function(id){
 
-  const data = await res.json();
-  document.getElementById("points").innerText = data.points;
+const res = await fetch("/api/complete-habit", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({habit_id:id})
+})
 
-  loadHabits();
-};
+const data = await res.json()
+
+if(data.error === "already_completed"){
+alert("Сегодня уже выполнено")
+return
+}
+
+document.getElementById("points").innerText = data.points
+
+loadHabits()
+
+}
+
+window.deleteHabit = async function(id){
+
+if(!confirm("Удалить привычку?")) return
+
+await fetch("/api/delete-habit",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({habit_id:id})
+})
+
+loadHabits()
+
+}
   
   loadUser();
 loadHabits();

@@ -25,7 +25,9 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 
 # Fix для postgres:// от Render
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 engine = create_engine(
     DATABASE_URL,
@@ -51,7 +53,9 @@ class User(Base):
 
 
 class Habit(Base):
-    __tablename__ = "habits"
+   
+    Date,
+    = "habits"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -63,7 +67,8 @@ class Habit(Base):
 
 
 class Completion(Base):
-    __tablename__ = "completions"
+   
+# ------------= "completions"
 
     id = Column(Integer, primary_key=True, index=True)
     habit_id = Column(Integer, ForeignKey("habits.id", ondelete="CASCADE"), nullable=False)
@@ -71,7 +76,8 @@ class Completion(Base):
 
     habit = relationship("Habit", back_populates="completions")
 
-    __table_args__ = (
+       Column,
+    = (
         UniqueConstraint("habit_id", "date", name="uq_habit_date"),
     )
 

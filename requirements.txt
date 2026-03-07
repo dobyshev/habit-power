@@ -1,5 +1,5 @@
-fastapi
-uvicorn
-sqlalchemy
-psycopg2-binary
-asyncpg
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+SQLAlchemy==1.4.54
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1

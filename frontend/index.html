@@ -9,12 +9,13 @@
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: linear-gradient(135deg,#4f46e5,#9333ea);
+      background:#0f0f0f;
       color: white;
     }
     .container { padding: 20px; }
     .card {
-      background: rgba(255,255,255,0.1);
+      background:#1a1a1a;
+      border:1px solid #2a2a2a;
       padding: 16px;
       border-radius: 16px;
       margin-bottom: 15px;
@@ -120,6 +121,24 @@ window.addHabit = async function() {
   loadHabits();
 };
 
+function getEmoji(name){
+
+name = name.toLowerCase()
+
+if(name.includes("run")) return "🏃"
+if(name.includes("read")) return "📚"
+if(name.includes("water")) return "💧"
+if(name.includes("workout")) return "🏋️"
+if(name.includes("code")) return "💻"
+if(name.includes("sleep")) return "🛌"
+if(name.includes("study")) return "🎓"
+
+return "⭐"
+
+}
+
+async function loadHabits() {
+  
 async function loadHabits() {
   if (!telegramUser) return;
 
@@ -144,18 +163,18 @@ html += `
 <div style="display:flex;justify-content:space-between;align-items:center">
 
 <div>
-${emoji} ${habit.name} 🔥 ${habit.streak}
+${getEmoji(habit.name)} ${habit.name} 🔥 ${habit.streak}
 </div>
 
 <div>
 
-<button onclick="completeHabit(${habit.id})" 
-style="background:#2ecc71;border:none;padding:6px 10px;border-radius:6px;color:white;margin-right:6px">
+<button onclick="completeHabit(${habit.id})"
+style="background:#22c55e;border:none;padding:8px 14px;border-radius:10px;color:white;margin-right:8px;font-weight:bold">
 ✔
 </button>
 
 <button onclick="deleteHabit(${habit.id})"
-style="background:#e74c3c;border:none;padding:6px 10px;border-radius:6px;color:white">
+style="background:#ef4444;border:none;padding:8px 14px;border-radius:10px;color:white;font-weight:bold"
 🗑
 </button>
 
@@ -198,7 +217,10 @@ if(!confirm("Удалить привычку?")) return
 await fetch("/api/delete-habit",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({habit_id:id})
+body:JSON.stringify({
+habit_id:id,
+telegram_id:telegramUser.id
+})
 })
 
 loadHabits()

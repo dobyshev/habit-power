@@ -29,7 +29,6 @@ class Habit(Base):
 
 class Completion(Base):
     delete
-from sq= "completions"
 
     id = Column(Integer, primary_key=True)
     habit_id = Column(Integer, ForeignKey("habits.id"))

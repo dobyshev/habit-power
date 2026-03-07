@@ -10,7 +10,7 @@ app = FastAPI()
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-app.mount("/frontend", StaticFiles(directory="app/frontend"), name="frontend")
+app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 
 
 @app.get("/app")

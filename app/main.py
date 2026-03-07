@@ -178,20 +178,22 @@ async def complete_habit(request: Request):
 
 
 @app.post("/api/delete-habit")
-async def delete_habit(request: Request):
+async def delete_habit(data: dict):
 
-    data = await request.json()
-    habit_id = data["habit_id"]
+    habit_id = data.get("habit_id")
 
-    async with AsyncSessionLocal() as session:
+    async with async_session() as session:
 
-        result = await session.execute(
-            select(Habit).where(Habit.id == habit_id)
+        # сначала удаляем выполнения
+        await session.execute(
+            delete(Completion).where(Completion.habit_id == habit_id)
         )
 
-        habit = result.scalar_one()
+        # потом удаляем привычку
+        await session.execute(
+            delete(Habit).where(Habit.id == habit_id)
+        )
 
-        await session.delete(habit)
         await session.commit()
 
     return {"status": "ok"}

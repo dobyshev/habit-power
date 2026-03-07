@@ -1,354 +1,691 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
+  <meta charset="UTF-8" />
+  <title>Habit Power</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-color: #050509;
+      --card-color: #181820;
+      --accent-green: #2ecc71;
+      --accent-red: #e74c3c;
+      --accent-gray: #555;
+      --text-color: #f5f5f5;
+      --muted-text: #aaaaaa;
+      --border-radius: 12px;
+    }
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    }
 
-<title>Habit Power</title>
+    body {
+      background: radial-gradient(circle at top, #202030 0, #050509 55%, #000 100%);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+    }
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-bottom: 70px;
+    }
 
-<style>
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
 
-body{
-margin:0;
-font-family:Arial;
-background:#0f0f0f;
-color:white;
-}
+    .title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
 
-.container{
-padding:20px;
-padding-bottom:80px;
-}
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted-text);
+    }
 
-.title{
-font-size:26px;
-font-weight:bold;
-margin-bottom:20px;
-}
+    .add-form {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
 
-.card{
-background:#1a1a1a;
-border:1px solid #2a2a2a;
-padding:16px;
-border-radius:16px;
-margin-bottom:12px;
-}
+    .add-input {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: var(--border-radius);
+      border: 1px solid #333;
+      background: #101018;
+      color: var(--text-color);
+      font-size: 14px;
+    }
 
-button{
-border:none;
-padding:8px 14px;
-border-radius:10px;
-color:white;
-font-weight:bold;
-cursor:pointer;
-}
+    .add-input::placeholder {
+      color: #666;
+    }
 
-.complete{
-background:#22c55e;
-margin-right:6px;
-}
+    .add-button {
+      padding: 10px 14px;
+      border-radius: var(--border-radius);
+      border: none;
+      background: var(--accent-green);
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
 
-.delete{
-background:#ef4444;
-}
+    .add-button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
 
-.addbtn{
-background:#3b82f6;
-margin-top:8px;
-}
+    .habits-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
 
-.rating{
-background:#6366f1;
-margin-bottom:12px;
-}
+    .habit-card {
+      background: linear-gradient(135deg, #181820, #101018);
+      border-radius: var(--border-radius);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #262636;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.6);
+    }
 
-input{
-width:100%;
-padding:10px;
-border-radius:8px;
-border:none;
-}
+    .habit-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-.footer{
-position:fixed;
-bottom:0;
-left:0;
-right:0;
-background:#111;
-border-top:1px solid #333;
-padding:12px;
-text-align:center;
-font-size:18px;
-}
+    .habit-emoji {
+      font-size: 22px;
+    }
 
-</style>
+    .habit-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
 
+    .habit-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .habit-streak {
+      font-size: 12px;
+      color: var(--muted-text);
+    }
+
+    .habit-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .btn-complete {
+      background: var(--accent-green);
+      color: #fff;
+    }
+
+    .btn-complete.disabled {
+      background: var(--accent-gray);
+      color: #ddd;
+      cursor: default;
+    }
+
+    .btn-delete {
+      background: transparent;
+      color: var(--accent-red);
+      border: 1px solid var(--accent-red);
+    }
+
+    .btn-delete:hover {
+      background: rgba(231, 76, 60, 0.1);
+    }
+
+    .trash-icon {
+      width: 14px;
+      height: 14px;
+      display: inline-block;
+      border: 2px solid currentColor;
+      border-radius: 2px;
+      position: relative;
+    }
+
+    .trash-icon::before {
+      content: "";
+      position: absolute;
+      top: -5px;
+      left: 2px;
+      right: 2px;
+      height: 2px;
+      border-radius: 2px;
+      border: 2px solid currentColor;
+    }
+
+    .trash-icon::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 4px;
+      right: 4px;
+      bottom: 3px;
+      border-left: 2px solid currentColor;
+      border-right: 2px solid currentColor;
+    }
+
+    .empty-state {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--muted-text);
+      text-align: center;
+    }
+
+    .bottom-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 10px 12px;
+      background: rgba(5, 5, 10, 0.96);
+      border-top: 1px solid #222;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(12px);
+    }
+
+    .points {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .points span {
+      color: var(--accent-green);
+    }
+
+    .leaderboard-btn {
+      border-radius: 999px;
+      border: 1px solid #444;
+      background: #15151f;
+      color: #fff;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .leaderboard-btn:hover {
+      border-color: #666;
+    }
+
+    .leaderboard-panel {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 60px;
+      max-height: 60%;
+      background: #05050a;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      border-top: 1px solid #222;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.8);
+      transform: translateY(100%);
+      transition: transform 0.25s ease-out;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px;
+    }
+
+    .leaderboard-panel.open {
+      transform: translateY(0);
+    }
+
+    .leaderboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .leaderboard-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .leaderboard-close {
+      border: none;
+      background: transparent;
+      color: #aaa;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .leaderboard-list {
+      margin-top: 4px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .leaderboard-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #15151f;
+      font-size: 13px;
+    }
+
+    .leaderboard-row:last-child {
+      border-bottom: none;
+    }
+
+    .leaderboard-rank {
+      width: 24px;
+      text-align: center;
+      color: var(--muted-text);
+    }
+
+    .leaderboard-user {
+      flex: 1;
+      padding: 0 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .leaderboard-points {
+      font-weight: 600;
+      color: var(--accent-green);
+    }
+
+    .badge-you {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #22223a;
+      color: #ddd;
+      margin-left: 4px;
+    }
+
+    .small {
+      font-size: 11px;
+      color: var(--muted-text);
+      margin-top: 4px;
+    }
+  </style>
 </head>
-
 <body>
-
-<div class="container">
-
-<div class="title">Habit Power</div>
-
-<button class="rating" onclick="toggleLeaderboard()">🏆 Рейтинг</button>
-
-<div id="leaderboard"></div>
-
-<div class="card">
-
-<input id="habitInput" placeholder="Новая привычка">
-
-<button class="addbtn" onclick="addHabit()">Добавить</button>
-
-</div>
-
-<div id="habitsList"></div>
-
-</div>
-
-<div class="footer">
-⭐ Очки: <span id="points">0</span> | 📋 Привычек: <span id="habitCount">0</span>
-</div>
-
-<script>
-
-let telegramUser=null
-let pointsEl=document.getElementById("points")
-let leaderboardOpen=false
-
-if(window.Telegram && window.Telegram.WebApp){
-
-const tg=window.Telegram.WebApp
-tg.expand()
-
-telegramUser=tg.initDataUnsafe.user
-
-}
-
-async function loadUser(){
-
-if(!telegramUser) return
-
-const res=await fetch("/api/user",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-telegram_id:telegramUser.id
-})
-})
-
-const data=await res.json()
-
-pointsEl.innerText=data.points || 0
-
-}
-
-async function addHabit(){
-
-const input=document.getElementById("habitInput")
-
-const name=input.value
-
-if(!name) return
-
-await fetch("/api/add-habit",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-telegram_id:telegramUser.id,
-name:name
-
-})
-
-})
-
-input.value=""
-
-loadHabits()
-
-}
-
-function getEmoji(name){
-
-name=name.toLowerCase()
-
-if(name.includes("run")) return "🏃"
-if(name.includes("read")) return "📚"
-if(name.includes("water")) return "💧"
-if(name.includes("workout")) return "🏋️"
-if(name.includes("code")) return "💻"
-if(name.includes("sleep")) return "🛌"
-if(name.includes("study")) return "🎓"
-
-return "⭐"
-
-}
-
-async function loadHabits(){
-
-if(!telegramUser) return
-
-const res=await fetch(`/api/habits/${telegramUser.id}`)
-
-const habits=await res.json()
-
-document.getElementById("habitCount").innerText=habits.length
-
-let html=""
-
-habits.forEach(habit=>{
-
-html+=`
-
-<div class="card">
-
-<div style="display:flex;justify-content:space-between;align-items:center">
-
-<div>
-
-${getEmoji(habit.name)} ${habit.name} 🔥 ${habit.streak}
-
-</div>
-
-<div>
-
-<button class="complete"
-onclick="completeHabit(${habit.id})">
-
-✔
-
-</button>
-
-<button class="delete"
-onclick="deleteHabit(${habit.id})">
-
-🗑
-
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-`
-
-})
-
-document.getElementById("habitsList").innerHTML=html
-
-}
-
-async function completeHabit(id){
-
-const res=await fetch("/api/complete-habit",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-habit_id:id
-
-})
-
-})
-
-const data=await res.json()
-
-if(data.error==="already_completed"){
-
-alert("Сегодня уже выполнено")
-
-return
-
-}
-
-pointsEl.innerText=data.points || 0
-
-loadHabits()
-
-}
-
-async function deleteHabit(id){
-
-if(!confirm("Удалить привычку?")) return
-
-await fetch("/api/delete-habit",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-habit_id:id,
-telegram_id:telegramUser.id
-
-})
-
-})
-
-loadHabits()
-
-}
-
-async function toggleLeaderboard(){
-
-const board=document.getElementById("leaderboard")
-
-if(leaderboardOpen){
-
-board.innerHTML=""
-
-leaderboardOpen=false
-
-return
-
-}
-
-const res=await fetch("/api/leaderboard")
-
-const data=await res.json()
-
-let html=`<div class="card"><b>🏆 Таблица лидеров</b><br><br>`
-
-data.forEach(user=>{
-
-html+=`${user.rank}. ${user.points} очков<br>`
-
-})
-
-html+="</div>"
-
-board.innerHTML=html
-
-leaderboardOpen=true
-
-}
-
-loadUser()
-loadHabits()
-
-</script>
-
+  <div class="container">
+    <div>
+      <div class="header">
+        <div>
+          <div class="title">Habit Power</div>
+          <div class="subtitle">Твои привычки, твоя серия</div>
+        </div>
+      </div>
+
+      <form class="add-form" id="add-form">
+        <input
+          type="text"
+          id="habit-input"
+          class="add-input"
+          placeholder="Например: 💧 Вода, 📚 Чтение..."
+          maxlength="100"
+        />
+        <button type="submit" class="add-button">Добавить</button>
+      </form>
+    </div>
+
+    <div id="habits-list" class="habits-list"></div>
+    <div id="empty-state" class="empty-state" style="display: none;">
+      Пока нет привычек. Добавь первую — и начни серию.
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="points">Очки: <span id="points-value">0</span></div>
+    <button class="leaderboard-btn" id="leaderboard-toggle">
+      Рейтинг
+    </button>
+  </div>
+
+  <div class="leaderboard-panel" id="leaderboard-panel">
+    <div class="leaderboard-header">
+      <div class="leaderboard-title">Таблица лидеров</div>
+      <button class="leaderboard-close" id="leaderboard-close">&times;</button>
+    </div>
+    <div class="small">Сортировка по очкам. +10 очков за выполнение привычки.</div>
+    <div class="leaderboard-list" id="leaderboard-list"></div>
+  </div>
+
+  <script>
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+
+    let telegramId = null;
+    let currentPoints = 0;
+
+    const habitsListEl = document.getElementById("habits-list");
+    const emptyStateEl = document.getElementById("empty-state");
+    const pointsValueEl = document.getElementById("points-value");
+    const addFormEl = document.getElementById("add-form");
+    const habitInputEl = document.getElementById("habit-input");
+    const leaderboardToggleEl = document.getElementById("leaderboard-toggle");
+    const leaderboardPanelEl = document.getElementById("leaderboard-panel");
+    const leaderboardCloseEl = document.getElementById("leaderboard-close");
+    const leaderboardListEl = document.getElementById("leaderboard-list");
+
+    function getBaseUrl() {
+      // На Render фронт и бэк на одном домене
+      return "";
+    }
+
+    async function apiFetch(path, options = {}) {
+      const url = getBaseUrl() + path;
+      const resp = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        ...options,
+      });
+
+      if (!resp.ok) {
+        let msg = "Ошибка запроса";
+        try {
+          const data = await resp.json();
+          if (data && data.detail) msg = data.detail;
+        } catch (e) {}
+        throw new Error(msg);
+      }
+
+      try {
+        return await resp.json();
+      } catch {
+        return null;
+      }
+    }
+
+    function renderHabits(habits) {
+      habitsListEl.innerHTML = "";
+
+      if (!habits || habits.length === 0) {
+        emptyStateEl.style.display = "block";
+        return;
+      } else {
+        emptyStateEl.style.display = "none";
+      }
+
+      habits.forEach((habit) => {
+        const card = document.createElement("div");
+        card.className = "habit-card";
+
+        const left = document.createElement("div");
+        left.className = "habit-left";
+
+        const emojiSpan = document.createElement("div");
+        emojiSpan.className = "habit-emoji";
+
+        const firstChar = habit.name.trim().charAt(0);
+        const emoji = /\p{Extended_Pictographic}/u.test(firstChar) ? firstChar : "🔥";
+        emojiSpan.textContent = emoji;
+
+        const info = document.createElement("div");
+        info.className = "habit-info";
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "habit-name";
+        nameEl.textContent = habit.name;
+
+        const streakEl = document.createElement("div");
+        streakEl.className = "habit-streak";
+        streakEl.textContent = `Серия: ${habit.streak} дн.`;
+
+        info.appendChild(nameEl);
+        info.appendChild(streakEl);
+
+        left.appendChild(emojiSpan);
+        left.appendChild(info);
+
+        const actions = document.createElement("div");
+        actions.className = "habit-actions";
+
+        const completeBtn = document.createElement("button");
+        completeBtn.className = "btn btn-complete";
+        completeBtn.textContent = "Выполнено";
+
+        if (habit.completed_today) {
+          completeBtn.classList.add("disabled");
+          completeBtn.disabled = true;
+        }
+
+        completeBtn.addEventListener("click", async () => {
+          if (completeBtn.disabled) return;
+
+          try {
+            const res = await apiFetch("/api/complete-habit", {
+              method: "POST",
+              body: JSON.stringify({
+                telegram_id: telegramId,
+                habit_id: habit.id,
+              }),
+            });
+
+            if (res.status === "already_done") {
+              completeBtn.classList.add("disabled");
+              completeBtn.disabled = true;
+              return;
+            }
+
+            if (res.status === "ok") {
+              habit.streak = res.streak;
+              streakEl.textContent =px;
+      font-weight: 700;
+  
+              currentPoints = res.points;
+              pointsValueEl.textContent = currentPoints;
+
+              completeBtn.classList.add("disabled");
+              completeBtn.disabled = true;
+            }
+          } catch (e) {
+            alert(e.message || "Ошибка выполнения привычки");
+          }
+        });
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-delete";
+        const trash = document.createElement("span");
+        trash.className = "trash-icon";
+        deleteBtn.appendChild(trash);
+
+        deleteBtn.addEventListener("click", async () => {
+          if (!confirm("Удалить привычку и все её выполнения?")) return;
+
+          try {
+            await apiFetch("/api/delete-habit", {
+              method: "POST",
+              body: JSON.stringify({
+                telegram_id: telegramId,
+                habit_id: habit.id,
+              }),
+            });
+            await loadHabits();
+          } catch (e) {
+            alert(e.message || "Ошибка удаления привычки");
+          }
+        });
+
+        actions.appendChild(completeBtn);
+        actions.appendChild(deleteBtn);
+
+        card.appendChild(left);
+        card.appendChild(actions);
+
+        habitsListEl.appendChild(card);
+      });
+    }
+
+    async function loadHabits() {
+      if (!telegramId) return;
+      try {
+        const data = await apiFetch(`/api/habits/${telegramId}`);
+        renderHabits(data.habits);
+        currentPoints = data.points;
+        pointsValueEl.textContent = currentPoints;
+      } catch (e) {
+        console.error(e);
+        alert(e.message || "Не удалось загрузить привычки");
+      }
+    }
+
+    async function ensureUser() {
+      if (!telegramId) return;
+      try {
+        await apiFetch("/api/user", {
+          method: "POST",
+          body: JSON.stringify({ telegram_id: telegramId }),
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    addFormEl.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = habitInputEl.value.trim();
+      if (!name) return;
+
+      try {
+        await apiFetch("/api/add-habit", {
+          method: "POST",
+          body: JSON.stringify({
+            telegram_id: telegramId,
+            name,
+          }),
+        });
+        habitInputEl.value = "";
+        await loadHabits();
+      } catch (err) {
+        alert(err.message || "Не удалось добавить привычку");
+      }
+    });
+
+    leaderboardToggleEl.addEventListener("click", async () => {
+      if (leaderboardPanelEl.classList.contains("open")) {
+        leaderboardPanelEl.classList.remove("open");
+        return;
+      }
+
+      try {
+        const data = await apiFetch("/api/leaderboard");
+        renderLeaderboard(data);
+        leaderboardPanelEl.classList.add("open");
+      } catch (e) {
+        alert(e.message || "Не удалось загрузить рейтинг");
+      }
+    });
+
+    leaderboardCloseEl.addEventListener("click", () => {
+      leaderboardPanelEl.classList.remove("open");
+    });
+
+    function renderLeaderboard(users) {
+      leaderboardListEl.innerHTML = "";
+      if (!users || users.length === 0) {
+        const div = document.createElement("div");
+        div.className = "small";
+        div.textContent = "Пока никто не набрал очков.";
+        leaderboardListEl.appendChild(div);
+        return;
+      }
+
+      users.forEach((u, idx) => {
+        const row = document.createElement("div");
+        row.className = "leaderboard-row";
+
+        const rank = document.createElement("div");
+        rank.className = "leaderboard-rank";
+        rank.textContent = idx + 1;
+
+        const userEl = document.createElement("div");
+        userEl.className = "leaderboard-user";
+        userEl.textContent = u.telegram_id;
+
+        if (u.telegram_id === String(telegramId)) {
+          const badge = document.createElement("span");
+          badge.className = "badge-you";
+          badge.textContent = "ты";
+          userEl.appendChild(badge);
+        }
+
+        const pointsEl = document.createElement("div");
+        pointsEl.className = "leaderboard-points";
+        pointsEl.textContent = u.points;
+
+        row.appendChild(rank);
+        row.appendChild(userEl);
+        row.appendChild(pointsEl);
+
+        leaderboardListEl.appendChild(row);
+      });
+    }
+
+    function initTelegramId() {
+      if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+        telegramId = String(tg.initDataUnsafe.user.id);
+      } else {
+        telegramId = prompt("Введите тестовый telegram_id (локальный режим):") || "test_user";
+      }
+    }
+
+    async function init() {
+      initTelegramId();
+      await ensureUser();
+      await loadHabits();
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
 </body>
 </html>
+
+

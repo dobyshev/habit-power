@@ -53,8 +53,6 @@ class User(Base):
 
 
 class Habit(Base):
-   =False)
-
     __tablename__ = "habits"
 
     id = Column(Integer, primary_key=True, index=True)

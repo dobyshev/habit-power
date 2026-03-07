@@ -7,6 +7,15 @@ from .models import User, Habit, Completion
 
 app = FastAPI()
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+app.mount("/frontend", StaticFiles(directory="app/frontend"), name="frontend")
+
+
+@app.get("/app")
+async def web_app():
+    return FileResponse("app/frontend/index.html")
 
 @app.get("/")
 async def root():

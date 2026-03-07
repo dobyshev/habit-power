@@ -28,12 +28,11 @@ class Habit(Base):
 
 
 class Completion(Base):
-    delete
+    __tablename__ = "completions"
 
     id = Column(Integer, primary_key=True)
     habit_id = Column(Integer, ForeignKey("habits.id"))
     date = Column(Date)
-
 
 # ---------- API ----------
 

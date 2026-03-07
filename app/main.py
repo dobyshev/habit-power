@@ -1,218 +1,204 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, select, delete
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import date
-
-DATABASE_URL = "sqlite+aiosqlite:///./habits.db"
-
-engine = create_async_engine(DATABASE_URL, echo=False)
-
-async_session = async_sessionmaker(engine, expire_on_commit=False)
-
-Base = declarative_base()
+import os
 
 app = FastAPI()
 
-# ---------------- MODELS ----------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+Base = declarative_base()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    telegram_id = Column(String, unique=True)
+    points = Column(Integer, default=0)
 
 class Habit(Base):
-    __tablename__ = "habits"
+   Integer, String= "habits"
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
     name = Column(String)
     streak = Column(Integer, default=0)
-    points = Column(Integer, default=0)
-
 
 class Completion(Base):
-    __tablename__ = "completions"
+    Date, ForeignK= "completions"
 
     id = Column(Integer, primary_key=True)
-    habit_id = Column(Integer, ForeignKey("habits.id"))
+    habit_id = Column(Integer)
     date = Column(Date)
 
-
-# ---------------- CREATE TABLES ----------------
-
-@app.on_event("startup")
-async def startup():
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
-# ---------------- USER ----------------
+Base.metadata.create_all(engine)
 
 @app.post("/api/user")
-async def get_user(data: dict):
+async def create_user(data: dict):
+    session = SessionLocal()
 
-    telegram_id = data.get("telegram_id")
+    user = session.query(User).filter_by(
+        telegram_id=data["telegram_id"]
+    ).first()
 
-    async with async_session() as session:
-
-        res = await session.execute(
-            select(Habit).where(Habit.user_id == telegram_id)
+    if not user:
+        user = User(
+            telegram_id=data["telegram_id"],
+            points=0
         )
+        session.add(user)
+        session.commit()
 
-        habits = res.scalars().all()
+    session.close()
 
-        total_points = sum(h.points for h in habits)
+    return {"points": user.points}
 
-        return {"points": total_points}
+@app.get("/api/habits/{telegram_id}")
+async def get_habits(telegram_id: str):
+    session = SessionLocal()
 
+    user = session.query(User).filter_by(
+        telegram_id=telegram_id
+    ).first()
 
-# ---------------- ADD HABIT ----------------
+    habits = session.query(Habit).filter_by(
+        user_id=user.id
+    ).all()
+
+    result = []
+
+    for h in habits:
+        result.append({
+            "id": h.id,
+            "name": h.name,
+            "streak": h.streak
+        })
+
+    session.close()
+
+    return result
 
 @app.post("/api/add-habit")
 async def add_habit(data: dict):
 
-    telegram_id = data.get("telegram_id")
-    name = data.get("name")
+    session = SessionLocal()
 
-    async with async_session() as session:
+    user = session.query(User).filter_by(
+        telegram_id=data["telegram_id"]
+    ).first()
 
-        res = await session.execute(
-            select(Habit).where(Habit.user_id == telegram_id)
-        )
+    count = session.query(Habit).filter_by(
+        user_id=user.id
+    ).count()
 
-        habits = res.scalars().all()
+    if count >= 10:
+        return {"error": "max_habits"}
 
-        if len(habits) >= 10:
-            return {"error": "limit"}
+    habit = Habit(
+        user_id=user.id,
+        name=data["name"]
+    )
 
-        habit = Habit(
-            user_id=telegram_id,
-            name=name,
-            streak=0,
-            points=0
-        )
+    session.add(habit)
+    session.commit()
+    session.close()
 
-        session.add(habit)
-
-        await session.commit()
-
-    return {"status": "added"}
-
-
-# ---------------- GET HABITS ----------------
-
-@app.get("/api/habits/{telegram_id}")
-async def get_habits(telegram_id: int):
-
-    async with async_session() as session:
-
-        res = await session.execute(
-            select(Habit).where(Habit.user_id == telegram_id)
-        )
-
-        habits = res.scalars().all()
-
-        return [
-            {
-                "id": h.id,
-                "name": h.name,
-                "streak": h.streak,
-                "points": h.points
-            }
-            for h in habits
-        ]
-
-
-# ---------------- COMPLETE HABIT ----------------
-
-@app.post("/api/complete-habit")
-async def complete_habit(data: dict):
-
-    habit_id = data.get("habit_id")
-
-    today = date.today()
-
-    async with async_session() as session:
-
-        res = await session.execute(
-            select(Completion).where(
-                Completion.habit_id == habit_id,
-                Completion.date == today
-            )
-        )
-
-        existing = res.scalar()
-
-        if existing:
-            return {"error": "already_completed"}
-
-        completion = Completion(
-            habit_id=habit_id,
-            date=today
-        )
-
-        session.add(completion)
-
-        habit = await session.get(Habit, habit_id)
-
-        habit.streak += 1
-        habit.points += 10
-
-        await session.commit()
-
-        return {"points": habit.points}
-
-
-# ---------------- DELETE HABIT ----------------
+    return {"success": True}
 
 @app.post("/api/delete-habit")
 async def delete_habit(data: dict):
 
-    habit_id = data.get("habit_id")
+    session = SessionLocal()
 
-    async with async_session() as session:
+    session.query(Completion).filter_by(
+        habit_id=data["habit_id"]
+    ).delete()
 
-        await session.execute(
-            delete(Completion).where(Completion.habit_id == habit_id)
-        )
+    session.query(Habit).filter_by(
+        id=data["habit_id"]
+    ).delete()
 
-        await session.execute(
-            delete(Habit).where(Habit.id == habit_id)
-        )
+    session.commit()
+    session.close()
 
-        return {"status": "deleted"}
+    return {"success": True}
 
+@app.post("/api/complete-habit")
+async def complete_habit(data: dict):
 
-# ---------------- LEADERBOARD ----------------
+    session = SessionLocal()
+
+    today = date.today()
+
+    done = session.query(Completion).filter_by(
+        habit_id=data["habit_id"],
+        date=today
+    ).first()
+
+    if done:
+        return {"error": "already_done"}
+
+    completion = Completion(
+        habit_id=data["habit_id"],
+        date=today
+    )
+
+    session.add(completion)
+
+    habit = session.query(Habit).filter_by(
+        id=data["habit_id"]
+    ).first()
+
+    habit.streak += 1
+
+    user = session.query(User).filter_by(
+        telegram_id=data["telegram_id"]
+    ).first()
+
+    user.points += 10
+
+    session.commit()
+
+    session.close()
+
+    return {"points": user.points}
 
 @app.get("/api/leaderboard")
 async def leaderboard():
 
-    async with async_session() as session:
+    session = SessionLocal()
 
-        res = await session.execute(select(Habit))
+    users = session.query(User).order_by(
+        User.points.desc()
+    ).limit(10).all()
 
-        habits = res.scalars().all()
+    result = []
 
-        users = {}
+    rank = 1
 
-        for h in habits:
-            users[h.user_id] = users.get(h.user_id, 0) + h.points
+    for u in users:
+        result.append({
+            "rank": rank,
+            "points": u.points
+        })
+        rank += 1
 
-        ranking = sorted(users.items(), key=lambda x: x[1], reverse=True)
+    session.close()
 
-        result = []
-
-        for i, (user, points) in enumerate(ranking):
-
-            result.append({
-                "rank": i + 1,
-                "points": points
-            })
-
-        return result
-
-
-# ---------------- FRONTEND ----------------
+    return result
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-
-        await session.commit()

@@ -136,8 +136,6 @@ if(name.includes("study")) return "🎓"
 return "⭐"
 
 }
-
-async function loadHabits() {
   
 async function loadHabits() {
   if (!telegramUser) return;
@@ -164,6 +162,7 @@ html += `
 
 <div>
 ${getEmoji(habit.name)} ${habit.name} 🔥 ${habit.streak}
+
 </div>
 
 <div>

@@ -173,7 +173,7 @@ style="background:#22c55e;border:none;padding:8px 14px;border-radius:10px;color:
 </button>
 
 <button onclick="deleteHabit(${habit.id})"
-style="background:#ef4444;border:none;padding:8px 14px;border-radius:10px;color:white;font-weight:bold"
+style="background:#ef4444;border:none;padding:8px 14px;border-radius:10px;color:white;font-weight:bold;cursor:pointer>
 🗑
 </button>
 
@@ -215,12 +215,14 @@ if(!confirm("Удалить привычку?")) return
 
 await fetch("/api/delete-habit",{
 method:"POST",
-headers:{"Content-Type":"application/json"},
+headers:{
+"Content-Type":"application/json"
+},
 body:JSON.stringify({
-habit_id:id,
-telegram_id:telegramUser.id
+habit_id: id,
+telegram_id: telegramUser.id
 })
-})
+});
 
 loadHabits()
 

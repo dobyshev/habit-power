@@ -1,193 +1,323 @@
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine, Column, Integer, String, Date
-from sqlalchemy.orm import sessionmaker, declarative_base
-from datetime import date
 import os
+import datetime
+from typing import List
 
-app = FastAPI()
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Date,
+    ForeignKey,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# -----------------------------
+# DB setup
+# -----------------------------
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+
+# Fix для postgres:// от Render
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
 
+# -----------------------------
+# SQLAlchemy модели
+# -----------------------------
+
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    telegram_id = Column(String, unique=True)
-    points = Column(Integer, default=0)
+    id = Column(Integer, primary_key=True, index=True)
+    telegram_id = Column(String, unique=True, index=True, nullable=False)
+    points = Column(Integer, default=0, nullable=False)
+
+    habits = relationship("Habit", back_populates="user", cascade="all, delete-orphan")
 
 
 class Habit(Base):
+   
+    Date,
+    = "habits"
 
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
-    name = Column(String)
-    streak = Column(Integer, default=0)
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    streak = Column(Integer, default=0, nullable=False)
+
+    user = relationship("User", back_populates="habits")
+    completions = relationship("Completion", back_populates="habit", cascade="all, delete-orphan")
 
 
 class Completion(Base):
-    declarative_ba= "completions"
+   
+# ------------= "completions"
 
-    id = Column(Integer, primary_key=True)
-    habit_id = Column(Integer)
-    date = Column(Date)
+    id = Column(Integer, primary_key=True, index=True)
+    habit_id = Column(Integer, ForeignKey("habits.id", ondelete="CASCADE"), nullable=False)
+    date = Column(Date, nullable=False)
 
+    habit = relationship("Habit", back_populates="completions")
 
-Base.metadata.create_all(engine)
-
-
-@app.get("/api/test")
-def test():
-    return {"status": "ok"}
-
-
-@app.post("/api/user")
-def create_user(data: dict):
-
-    session = SessionLocal()
-
-    user = session.query(User).filter_by(
-        telegram_id=data["telegram_id"]
-    ).first()
-
-    if not user:
-        user = User(
-            telegram_id=data["telegram_id"],
-            points=0
-        )
-        session.add(user)
-        session.commit()
-
-    points = user.points
-
-    session.close()
-
-    return {"points": points}
-
-
-@app.get("/api/habits/{telegram_id}")
-def get_habits(telegram_id: str):
-
-    session = SessionLocal()
-
-    user = session.query(User).filter_by(
-        telegram_id=telegram_id
-    ).first()
-
-    habits = session.query(Habit).filter_by(
-        user_id=user.id
-    ).all()
-
-    result = []
-
-    for h in habits:
-        result.append({
-            "id": h.id,
-            "name": h.name,
-            "streak": h.streak
-        })
-
-    session.close()
-
-    return result
-
-
-@app.post("/api/add-habit")
-def add_habit(data: dict):
-
-    session = SessionLocal()
-
-    user = session.query(User).filter_by(
-        telegram_id=data["telegram_id"]
-    ).first()
-
-    count = session.query(Habit).filter_by(
-        user_id=user.id
-    ).count()
-
-    if count >= 10:
-        return {"error": "max_habits"}
-
-    habit = Habit(
-        user_id=user.id,
-        name=data["name"]
+       Column,
+    = (
+        UniqueConstraint("habit_id", "date", name="uq_habit_date"),
     )
 
-    session.add(habit)
-    session.commit()
 
-    session.close()
+# -----------------------------
+# Pydantic схемы
+# -----------------------------
 
-    return {"success": True}
+class UserCreate(BaseModel):
+    telegram_id: str
+
+
+class HabitCreate(BaseModel):
+    telegram_id: str
+    name: str
+
+
+class HabitDelete(BaseModel):
+    telegram_id: str
+    habit_id: int
+
+
+class HabitComplete(BaseModel):
+    telegram_id: str
+    habit_id: int
+
+
+class HabitOut(BaseModel):
+    id: int
+    name: str
+    streak: int
+    completed_today: bool
+
+    class Config:
+        orm_mode = True
+
+
+class HabitsResponse(BaseModel):
+    habits: List[HabitOut]
+    points: int
+
+
+class LeaderboardUser(BaseModel):
+    telegram_id: str
+    points: int
+
+    class Config:
+        orm_mode = True
+
+
+# -----------------------------
+# FastAPI app
+# -----------------------------
+
+app = FastAPI(title="Habit Power API")
+
+# CORS (на будущее, если понадобится)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# -----------------------------
+# Dependency
+# -----------------------------
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# -----------------------------
+# Startup
+# -----------------------------
+
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
+
+
+# -----------------------------
+# Helpers
+# -----------------------------
+
+def get_or_create_user(db: Session, telegram_id: str) -> User:
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+    if not user:
+        user = User(telegram_id=telegram_id, points=0)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
+
+
+def today_date() -> datetime.date:
+    return datetime.date.today()
+
+
+# -----------------------------
+# API endpoints
+# -----------------------------
+
+@app.post("/api/user")
+def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
+    user = get_or_create_user(db, user_in.telegram_id)
+    return {"id": user.id, "telegram_id": user.telegram_id, "points": user.points}
+
+
+@app.get("/api/habits/{telegram_id}", response_model=HabitsResponse)
+def get_habits(telegram_id: str, db: Session = Depends(get_db)):
+    user = get_or_create_user(db, telegram_id)
+    today = today_date()
+
+    habits = (
+        db.query(Habit)
+        .filter(Habit.user_id == user.id)
+        .order_by(Habit.id.asc())
+        .all()
+    )
+
+    result: List[HabitOut] = []
+    for h in habits:
+        completed = (
+            db.query(Completion)
+            .filter(Completion.habit_id == h.id, Completion.date == today)
+            .first()
+            is not None
+        )
+        result.append(
+            HabitOut(
+                id=h.id,
+                name=h.name,
+                streak=h.streak,
+                completed_today=completed,
+            )
+        )
+
+    return HabitsResponse(habits=result, points=user.points)
+
+
+@app.post("/api/add-habit", response_model=HabitOut)
+def add_habit(habit_in: HabitCreate, db: Session = Depends(get_db)):
+    user = get_or_create_user(db, habit_in.telegram_id)
+
+    count = db.query(Habit).filter(Habit.user_id == user.id).count()
+    if count >= 10:
+        raise HTTPException(status_code=400, detail="Habit limit reached (10).")
+
+    name = habit_in.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Habit name cannot be empty.")
+
+    habit = Habit(user_id=user.id, name=name, streak=0)
+    db.add(habit)
+    db.commit()
+    db.refresh(habit)
+
+    return HabitOut(
+        id=habit.id,
+        name=habit.name,
+        streak=habit.streak,
+        completed_today=False,
+    )
 
 
 @app.post("/api/delete-habit")
-def delete_habit(data: dict):
+def delete_habit(habit_del: HabitDelete, db: Session = Depends(get_db)):
+    user = get_or_create_user(db, habit_del.telegram_id)
 
-    session = SessionLocal()
+    habit = (
+        db.query(Habit)
+        .filter(Habit.id == habit_del.habit_id, Habit.user_id == user.id)
+        .first()
+    )
+    if not habit:
+        raise HTTPException(status_code=404, detail="Habit not found.")
 
-    session.query(Completion).filter_by(
-        habit_id=data["habit_id"]
-    ).delete()
-
-    session.query(Habit).filter_by(
-        id=data["habit_id"]
-    ).delete()
-
-    session.commit()
-
-    session.close()
-
-    return {"success": True}
+    db.delete(habit)
+    db.commit()
+    return {"status": "deleted"}
 
 
 @app.post("/api/complete-habit")
-def complete_habit(data: dict):
+def complete_habit(habit_comp: HabitComplete, db: Session = Depends(get_db)):
+    user = get_or_create_user(db, habit_comp.telegram_id)
 
-    session = SessionLocal()
-
-    today = date.today()
-
-    done = session.query(Completion).filter_by(
-        habit_id=data["habit_id"],
-        date=today
-    ).first()
-
-    if done:
-        return {"error": "already_done"}
-
-    completion = Completion(
-        habit_id=data["habit_id"],
-        date=today
+    habit = (
+        db.query(Habit)
+        .filter(Habit.id == habit_comp.habit_id, Habit.user_id == user.id)
+        .first()
     )
+    if not habit:
+        raise HTTPException(status_code=404, detail="Habit not found.")
 
-    session.add(completion)
+    today = today_date()
 
-    habit = session.query(Habit).filter_by(
-        id=data["habit_id"]
-    ).first()
+    existing = (
+        db.query(Completion)
+        .filter(Completion.habit_id == habit.id, Completion.date == today)
+        .first()
+    )
+    if existing:
+        return {"status": "already_done"}
+
+    completion = Completion(habit_id=habit.id, date=today)
+    db.add(completion)
 
     habit.streak += 1
-
-    user = session.query(User).filter_by(
-        telegram_id=data["telegram_id"]
-    ).first()
-
     user.points += 10
 
-    session.commit()
+    db.commit()
+    db.refresh(habit)
+    db.refresh(user)
 
-    points = user.points
+    return {
+        "status": "ok",
+        "streak": habit.streak,
+        "points": user.points,
+    }
 
-    session.close()
 
-    return {"points": points}
+@app.get("/api/leaderboard", response_model=List[LeaderboardUser])
+def leaderboard(db: Session = Depends(get_db)):
+    users = (
+        db.query(User)
+        .order_by(User.points.desc(), User.id.asc())
+        .limit(100)
+        .all()
+    )
+    return [LeaderboardUser(telegram_id=u.telegram_id, points=u.points) for u in users]
 
 
+# -----------------------------
+# Static frontend
+# -----------------------------
+
+# Монтируем ПОСЛЕ API, чтобы /api/... не перехватывалось статиками
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

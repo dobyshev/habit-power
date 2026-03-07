@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Habit Power</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -18,17 +20,13 @@ color:white;
 
 .container{
 padding:20px;
+padding-bottom:80px;
 }
 
 .title{
-font-size:24px;
+font-size:26px;
 font-weight:bold;
 margin-bottom:20px;
-}
-
-.points{
-margin-bottom:15px;
-font-size:18px;
 }
 
 .card{
@@ -50,11 +48,21 @@ cursor:pointer;
 
 .complete{
 background:#22c55e;
-margin-right:8px;
+margin-right:6px;
 }
 
 .delete{
 background:#ef4444;
+}
+
+.addbtn{
+background:#3b82f6;
+margin-top:8px;
+}
+
+.rating{
+background:#6366f1;
+margin-bottom:12px;
 }
 
 input{
@@ -62,11 +70,18 @@ width:100%;
 padding:10px;
 border-radius:8px;
 border:none;
-margin-bottom:8px;
 }
 
-.addbtn{
-background:#3b82f6;
+.footer{
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+background:#111;
+border-top:1px solid #333;
+padding:12px;
+text-align:center;
+font-size:18px;
 }
 
 </style>
@@ -79,13 +94,13 @@ background:#3b82f6;
 
 <div class="title">Habit Power</div>
 
-<div class="points">
-⭐ Очки: <span id="points">0</span>
-</div>
+<button class="rating" onclick="toggleLeaderboard()">🏆 Рейтинг</button>
+
+<div id="leaderboard"></div>
 
 <div class="card">
 
-<input id="habitInput" placeholder="Новая привычка"/>
+<input id="habitInput" placeholder="Новая привычка">
 
 <button class="addbtn" onclick="addHabit()">Добавить</button>
 
@@ -95,15 +110,23 @@ background:#3b82f6;
 
 </div>
 
+<div class="footer">
+⭐ Очки: <span id="points">0</span> | 📋 Привычек: <span id="habitCount">0</span>
+</div>
+
 <script>
 
 let telegramUser=null
 let pointsEl=document.getElementById("points")
+let leaderboardOpen=false
 
 if(window.Telegram && window.Telegram.WebApp){
+
 const tg=window.Telegram.WebApp
 tg.expand()
+
 telegramUser=tg.initDataUnsafe.user
+
 }
 
 async function loadUser(){
@@ -112,7 +135,9 @@ if(!telegramUser) return
 
 const res=await fetch("/api/user",{
 method:"POST",
-headers:{"Content-Type":"application/json"},
+headers:{
+"Content-Type":"application/json"
+},
 body:JSON.stringify({
 telegram_id:telegramUser.id
 })
@@ -120,24 +145,33 @@ telegram_id:telegramUser.id
 
 const data=await res.json()
 
-pointsEl.innerText=data.points
+pointsEl.innerText=data.points || 0
 
 }
 
 async function addHabit(){
 
 const input=document.getElementById("habitInput")
+
 const name=input.value
 
 if(!name) return
 
 await fetch("/api/add-habit",{
+
 method:"POST",
-headers:{"Content-Type":"application/json"},
+
+headers:{
+"Content-Type":"application/json"
+},
+
 body:JSON.stringify({
+
 telegram_id:telegramUser.id,
 name:name
+
 })
+
 })
 
 input.value=""
@@ -167,7 +201,10 @@ async function loadHabits(){
 if(!telegramUser) return
 
 const res=await fetch(`/api/habits/${telegramUser.id}`)
+
 const habits=await res.json()
+
+document.getElementById("habitCount").innerText=habits.length
 
 let html=""
 
@@ -180,19 +217,25 @@ html+=`
 <div style="display:flex;justify-content:space-between;align-items:center">
 
 <div>
+
 ${getEmoji(habit.name)} ${habit.name} 🔥 ${habit.streak}
+
 </div>
 
 <div>
 
 <button class="complete"
 onclick="completeHabit(${habit.id})">
+
 ✔
+
 </button>
 
 <button class="delete"
 onclick="deleteHabit(${habit.id})">
+
 🗑
+
 </button>
 
 </div>
@@ -212,21 +255,32 @@ document.getElementById("habitsList").innerHTML=html
 async function completeHabit(id){
 
 const res=await fetch("/api/complete-habit",{
+
 method:"POST",
-headers:{"Content-Type":"application/json"},
+
+headers:{
+"Content-Type":"application/json"
+},
+
 body:JSON.stringify({
+
 habit_id:id
+
 })
+
 })
 
 const data=await res.json()
 
 if(data.error==="already_completed"){
+
 alert("Сегодня уже выполнено")
+
 return
+
 }
 
-pointsEl.innerText=data.points
+pointsEl.innerText=data.points || 0
 
 loadHabits()
 
@@ -237,15 +291,57 @@ async function deleteHabit(id){
 if(!confirm("Удалить привычку?")) return
 
 await fetch("/api/delete-habit",{
+
 method:"POST",
-headers:{"Content-Type":"application/json"},
+
+headers:{
+"Content-Type":"application/json"
+},
+
 body:JSON.stringify({
+
 habit_id:id,
 telegram_id:telegramUser.id
+
 })
+
 })
 
 loadHabits()
+
+}
+
+async function toggleLeaderboard(){
+
+const board=document.getElementById("leaderboard")
+
+if(leaderboardOpen){
+
+board.innerHTML=""
+
+leaderboardOpen=false
+
+return
+
+}
+
+const res=await fetch("/api/leaderboard")
+
+const data=await res.json()
+
+let html=`<div class="card"><b>🏆 Таблица лидеров</b><br><br>`
+
+data.forEach(user=>{
+
+html+=`${user.rank}. ${user.points} очков<br>`
+
+})
+
+html+="</div>"
+
+board.innerHTML=html
+
+leaderboardOpen=true
 
 }
 

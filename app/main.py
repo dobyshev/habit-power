@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import Column, Integer, String, Date, create_engine
+from sqlalchemy import create_engine, Column, Integer, String, Date
 from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import date
 import os

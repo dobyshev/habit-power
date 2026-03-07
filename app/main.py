@@ -24,7 +24,6 @@ class User(Base):
 
 
 class Habit(Base):
-   rt sessionmaker= "habits"
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)

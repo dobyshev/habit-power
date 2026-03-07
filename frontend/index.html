@@ -1,129 +1,154 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Power</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background:#0f0f0f;
-      color: white;
-    }
-    .container { padding: 20px; }
-    .card {
-      background:#1a1a1a;
-      border:1px solid #2a2a2a;
-      padding: 16px;
-      border-radius: 16px;
-      margin-bottom: 15px;
-      cursor: pointer;
-    }
-    .title { font-size: 22px; font-weight: bold; margin-bottom:20px; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Habit Power</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#0f0f0f;
+color:white;
+}
+
+.container{
+padding:20px;
+}
+
+.title{
+font-size:24px;
+font-weight:bold;
+margin-bottom:20px;
+}
+
+.points{
+margin-bottom:15px;
+font-size:18px;
+}
+
+.card{
+background:#1a1a1a;
+border:1px solid #2a2a2a;
+padding:16px;
+border-radius:16px;
+margin-bottom:12px;
+}
+
+button{
+border:none;
+padding:8px 14px;
+border-radius:10px;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+
+.complete{
+background:#22c55e;
+margin-right:8px;
+}
+
+.delete{
+background:#ef4444;
+}
+
+input{
+width:100%;
+padding:10px;
+border-radius:8px;
+border:none;
+margin-bottom:8px;
+}
+
+.addbtn{
+background:#3b82f6;
+}
+
+</style>
+
 </head>
+
 <body>
 
 <div class="container">
-  <div class="title">Habit Power</div>
 
-  <div class="card" onclick="addPoints()">✅ Отметить выполнение</div>
-  
-  <div class="card">
-  <input id="habitInput" placeholder="Новая привычка"
-         style="padding:8px;border-radius:8px;border:none;width:100%;">
-  <button onclick="addHabit()" style="margin-top:8px;">Добавить</button>
+<div class="title">Habit Power</div>
+
+<div class="points">
+⭐ Очки: <span id="points">0</span>
+</div>
+
+<div class="card">
+
+<input id="habitInput" placeholder="Новая привычка"/>
+
+<button class="addbtn" onclick="addHabit()">Добавить</button>
+
 </div>
 
 <div id="habitsList"></div>
 
-  <div class="card">
-    🏆 Очки: <span id="points">0</span>
-  </div>
 </div>
-<div class="card" onclick="showLeaderboard()">🏆 Рейтинг</div>
 
-<div id="leaderboard" style="margin-top:15px;"></div>
 <script>
-document.addEventListener("DOMContentLoaded", function() {
 
-  let pointsEl = document.getElementById("points");
-  let telegramUser = null;
+let telegramUser=null
+let pointsEl=document.getElementById("points")
 
-  if (window.Telegram && window.Telegram.WebApp) {
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-    telegramUser = tg.initDataUnsafe?.user;
-  }
+if(window.Telegram && window.Telegram.WebApp){
+const tg=window.Telegram.WebApp
+tg.expand()
+telegramUser=tg.initDataUnsafe.user
+}
 
-  async function loadUser() {
-    if (!telegramUser) return;
+async function loadUser(){
 
-    const res = await fetch("/api/user", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        telegram_id: telegramUser.id
-      })
-    });
+if(!telegramUser) return
 
-    const data = await res.json();
-    pointsEl.innerText = data.points;
-  }
+const res=await fetch("/api/user",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+telegram_id:telegramUser.id
+})
+})
 
-  window.addPoints = async function() {
-    if (!telegramUser) return;
+const data=await res.json()
 
-    const res = await fetch("/api/add-points", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        telegram_id: telegramUser.id
-      })
-    });
+pointsEl.innerText=data.points
 
-    const data = await res.json();
-    pointsEl.innerText = data.points;
-  };
-window.showLeaderboard = async function() {
-  const res = await fetch("/api/leaderboard");
-  const data = await res.json();
+}
 
-  let html = "<div class='card'><b>🏆 Таблица лидеров</b><br><br>";
+async function addHabit(){
 
-  data.forEach(user => {
-    html += `#${user.rank} — ${user.points} очков<br>`;
-  });
+const input=document.getElementById("habitInput")
+const name=input.value
 
-  html += "</div>";
+if(!name) return
 
-  document.getElementById("leaderboard").innerHTML = html;
-};
+await fetch("/api/add-habit",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+telegram_id:telegramUser.id,
+name:name
+})
+})
 
-window.addHabit = async function() {
-  const input = document.getElementById("habitInput");
-  const name = input.value;
+input.value=""
 
-  if (!name) return;
+loadHabits()
 
-  await fetch("/api/add-habit", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      telegram_id: telegramUser.id,
-      name: name
-    })
-  });
-
-  input.value = "";
-  loadHabits();
-};
+}
 
 function getEmoji(name){
 
-name = name.toLowerCase()
+name=name.toLowerCase()
 
 if(name.includes("run")) return "🏃"
 if(name.includes("read")) return "📚"
@@ -136,44 +161,37 @@ if(name.includes("study")) return "🎓"
 return "⭐"
 
 }
-  
-async function loadHabits() {
-  if (!telegramUser) return;
 
-  const res = await fetch(`/api/habits/${telegramUser.id}`);
-  const habits = await res.json();
+async function loadHabits(){
 
-  let html = "";
+if(!telegramUser) return
 
-  habits.forEach(habit => {
+const res=await fetch(`/api/habits/${telegramUser.id}`)
+const habits=await res.json()
 
-let emoji = "⭐"
+let html=""
 
-if(habit.name.toLowerCase().includes("run")) emoji = "🏃"
-if(habit.name.toLowerCase().includes("read")) emoji = "📚"
-if(habit.name.toLowerCase().includes("water")) emoji = "💧"
-if(habit.name.toLowerCase().includes("workout")) emoji = "🏋️"
-if(habit.name.toLowerCase().includes("code")) emoji = "💻"
+habits.forEach(habit=>{
 
-html += `
+html+=`
+
 <div class="card">
 
 <div style="display:flex;justify-content:space-between;align-items:center">
 
 <div>
 ${getEmoji(habit.name)} ${habit.name} 🔥 ${habit.streak}
-
 </div>
 
 <div>
 
-<button onclick="completeHabit(${habit.id})"
-style="background:#22c55e;border:none;padding:8px 14px;border-radius:10px;color:white;margin-right:8px;font-weight:bold">
+<button class="complete"
+onclick="completeHabit(${habit.id})">
 ✔
 </button>
 
-<button onclick="deleteHabit(${habit.id})"
-style="background:#ef4444;border:none;padding:8px 14px;border-radius:10px;color:white;font-weight:bold;cursor:pointer>
+<button class="delete"
+onclick="deleteHabit(${habit.id})">
 🗑
 </button>
 
@@ -182,56 +200,58 @@ style="background:#ef4444;border:none;padding:8px 14px;border-radius:10px;color:
 </div>
 
 </div>
+
 `
 
 })
-  document.getElementById("habitsList").innerHTML = html;
+
+document.getElementById("habitsList").innerHTML=html
+
 }
 
-window.completeHabit = async function(id){
+async function completeHabit(id){
 
-const res = await fetch("/api/complete-habit", {
+const res=await fetch("/api/complete-habit",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({habit_id:id})
+body:JSON.stringify({
+habit_id:id
+})
 })
 
-const data = await res.json()
+const data=await res.json()
 
-if(data.error === "already_completed"){
+if(data.error==="already_completed"){
 alert("Сегодня уже выполнено")
 return
 }
 
-document.getElementById("points").innerText = data.points
+pointsEl.innerText=data.points
 
 loadHabits()
 
 }
 
-window.deleteHabit = async function(id){
+async function deleteHabit(id){
 
 if(!confirm("Удалить привычку?")) return
 
 await fetch("/api/delete-habit",{
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
+headers:{"Content-Type":"application/json"},
 body:JSON.stringify({
-habit_id: id,
-telegram_id: telegramUser.id
+habit_id:id,
+telegram_id:telegramUser.id
 })
-});
+})
 
 loadHabits()
 
 }
-  
-  loadUser();
-loadHabits();
 
-});
+loadUser()
+loadHabits()
+
 </script>
 
 </body>

@@ -28,7 +28,7 @@ class Habit(Base):
 
 
 class Completion(Base):
-   , Integer, Stri= "completions"
+    __tablename__ = "completions"
 
     id = Column(Integer, primary_key=True)
     habit_id = Column(Integer, ForeignKey("habits.id"))

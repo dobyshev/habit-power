@@ -65,7 +65,7 @@ class Habit(Base):
 
 
 class Completion(Base):
-   __tablename__ = "completions"
+    __tablename__ = "completions"
 
     id = Column(Integer, primary_key=True, index=True)
     habit_id = Column(Integer, ForeignKey("habits.id", ondelete="CASCADE"), nullable=False)
@@ -76,8 +76,6 @@ class Completion(Base):
     __table_args__ = (
         UniqueConstraint("habit_id", "date", name="uq_habit_date"),
     )
-
-
 
 
 # -----------------------------

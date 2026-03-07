@@ -53,9 +53,9 @@ class User(Base):
 
 
 class Habit(Base):
-   
-    Date,
-    = "habits"
+   =False)
+
+    __tablename__ = "habits"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -67,8 +67,7 @@ class Habit(Base):
 
 
 class Completion(Base):
-   
-# ------------= "completions"
+   __tablename__ = "completions"
 
     id = Column(Integer, primary_key=True, index=True)
     habit_id = Column(Integer, ForeignKey("habits.id", ondelete="CASCADE"), nullable=False)
@@ -76,10 +75,11 @@ class Completion(Base):
 
     habit = relationship("Habit", back_populates="completions")
 
-       Column,
-    = (
+    __table_args__ = (
         UniqueConstraint("habit_id", "date", name="uq_habit_date"),
     )
+
+
 
 
 # -----------------------------

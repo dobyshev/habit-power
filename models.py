@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, BigInteger
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import date
@@ -8,7 +8,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    telegram_id = Column(Integer, unique=True, index=True)
+    telegram_id = Column(BigInteger, unique=True, index=True)
     points = Column(Integer, default=0)
 
     habits = relationship("Habit", back_populates="user", cascade="all, delete-orphan")

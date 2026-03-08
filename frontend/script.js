@@ -1,47 +1,32 @@
-// ОТЛАДОЧНАЯ ВЕРСИЯ
-console.log('=== НАЧАЛО ЗАГРУЗКИ ПРИЛОЖЕНИЯ ===');
-console.log('User Agent:', navigator.userAgent);
-console.log('Window location:', window.location.href);
-
+// Получаем ID пользователя из Telegram
 let telegramId = null;
 let tg = null;
 
 try {
-    console.log('Проверка window.Telegram:', window.Telegram);
+    // Инициализация Telegram WebApp
+    tg = window.Telegram.WebApp;
+    tg.expand(); // Разворачиваем на весь экран
     
-    if (window.Telegram && window.Telegram.WebApp) {
-        tg = window.Telegram.WebApp;
-        console.log('✅ Telegram WebApp найден!');
-        
-        console.log('initDataUnsafe:', tg.initDataUnsafe);
-        console.log('initDataUnsafe.user:', tg.initDataUnsafe?.user);
-        
-        tg.ready();
-        tg.expand();
-        
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            telegramId = tg.initDataUnsafe.user.id;
-            console.log('✅ Получен реальный Telegram ID:', telegramId);
-            console.log('Данные пользователя:', tg.initDataUnsafe.user);
-        } else {
-            console.log('❌ Нет данных пользователя в Telegram');
-            console.log('initDataUnsafe полный:', JSON.stringify(tg.initDataUnsafe));
-            telegramId = 123456789; // Тестовый ID
-            console.log('⚠️ Использую тестовый ID:', telegramId);
-        }
+    // Получаем данные пользователя
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        telegramId = tg.initDataUnsafe.user.id;
+        console.log('Telegram user ID:', telegramId);
     } else {
-        console.log('❌ Telegram WebApp НЕ доступен (работаем в браузере)');
-        console.log('window.Telegram:', window.Telegram);
+        // Если не в Telegram (для локального тестирования)
+        console.log('Не в Telegram, используем тестовый ID');
         telegramId = 123456789;
-        console.log('⚠️ Использую тестовый ID:', telegramId);
     }
 } catch (e) {
-    console.error('❌ Ошибка при инициализации Telegram:', e);
+    console.log('Ошибка инициализации Telegram WebApp:', e);
+    console.log('Используем тестовый режим');
     telegramId = 123456789;
 }
 
-console.log('=== ИТОГ ===');
-console.log('Telegram ID для запросов:', telegramId);
+// Проверяем, что ID получен
+if (!telegramId) {
+    console.error('Не удалось получить ID пользователя');
+    telegramId = 123456789; // Запасной вариант
+}
 
 // API базовый URL
 const API_BASE = '';
@@ -82,14 +67,6 @@ function getHabitEmoji(name) {
         }
     }
     return '⭐';
-}
-
-function updateDebugInfo(message) {
-    const debugDiv = document.getElementById('debug-info');
-    if (debugDiv) {
-        debugDiv.innerHTML = message + '<br>' + debugDiv.innerHTML;
-    }
-    console.log(message);
 }
 
 // Создание карточки привычки
@@ -262,18 +239,14 @@ async function loadLeaderboard() {
 
 // Инициализация приложения
 async function initApp() {
-    console.log('initApp() вызван с ID:', telegramId);
-    
     if (!telegramId) {
-        console.error('❌ telegramId отсутствует!');
         showError('Не удалось получить ID пользователя');
         return;
     }
     
+    // Регистрируем пользователя
     try {
-        console.log('Создание/получение пользователя для ID:', telegramId);
-        
-        const userResponse = await fetch(`${API_BASE}/api/user`, {
+        await fetch(`${API_BASE}/api/user`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -282,26 +255,13 @@ async function initApp() {
                 telegram_id: telegramId
             })
         });
-        
-        console.log('Ответ от /api/user статус:', userResponse.status);
-        
-        if (!userResponse.ok) {
-            const errorText = await userResponse.text();
-            console.error('❌ Ошибка создания пользователя:', errorText);
-            showError('Ошибка при создании пользователя');
-            return;
-        }
-        
-        const userData = await userResponse.json();
-        console.log('✅ Пользователь создан/получен:', userData);
-        
-        await loadHabits();
-        document.getElementById('points').textContent = userData.points;
-        
     } catch (error) {
-        console.error('❌ Ошибка при инициализации:', error);
-        showError('Ошибка при подключении к серверу');
+        console.error('Error creating user:', error);
     }
+    
+    // Загружаем данные
+    await loadHabits();
+    await loadUserPoints();
 }
 
 // Обработчики событий

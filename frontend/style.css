@@ -293,3 +293,79 @@ body {
     text-align: center;
     animation: slideIn 0.3s ease;
 }
+
+/* ===== СТИЛИ ДЛЯ БЛОКА СТАТИСТИКИ ===== */
+.stats-card {
+    background-color: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.stat-item {
+    background-color: #242424;
+    border-radius: 15px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #2a2a2a;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    border-color: #3a3a3a;
+}
+
+.stat-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #b0b0b0;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.stat-icon {
+    font-size: 18px;
+    filter: brightness(0.9);
+}
+
+.stat-value {
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-left: 26px; /* Выравнивание под текст, а не под иконку */
+}
+
+/* Адаптивность для очень маленьких экранов */
+@media (max-width: 400px) {
+    .stats-grid {
+        gap: 10px;
+    }
+    
+    .stat-item {
+        padding: 12px;
+    }
+    
+    .stat-value {
+        font-size: 22px;
+        margin-left: 0;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+    }
+}

@@ -131,6 +131,8 @@ function createHabitCard(habit) {
             // Делаем кнопку серой
             completeBtn.classList.add('completed');
             completeBtn.disabled = true;
+
+            await loadStatistics();
             
         } catch (error) {
             console.error('Error completing habit:', error);
@@ -156,6 +158,7 @@ function createHabitCard(habit) {
                 if (response.ok) {
                     card.remove();
                     await loadUserPoints();
+                    await loadStatistics();
                 }
             } catch (error) {
                 console.error('Error deleting habit:', error);
@@ -211,6 +214,52 @@ async function loadUserPoints() {
     }
 }
 
+// ===== НОВАЯ ФУНКЦИЯ ДЛЯ ЗАГРУЗКИ И ОБНОВЛЕНИЯ СТАТИСТИКИ =====
+async function loadStatistics() {
+    if (!telegramId) return;
+
+    try {
+        // 1. Получаем привычки пользователя, чтобы посчитать статистику
+        const habitsResponse = await fetch(`${API_BASE}/api/habits/${telegramId}`);
+        if (!habitsResponse.ok) {
+            console.error('Ошибка загрузки привычек для статистики');
+            return;
+        }
+        const habits = await habitsResponse.json();
+
+        // 2. Получаем очки пользователя
+        const pointsResponse = await fetch(`${API_BASE}/api/user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegram_id: telegramId })
+        });
+
+        if (!pointsResponse.ok) {
+            console.error('Ошибка загрузки очков для статистики');
+            return;
+        }
+        const userData = await pointsResponse.json();
+
+        // 3. Рассчитываем показатели
+        const habitsCount = habits.length;
+
+        // Суммируем все streak (это и есть общее количество выполнений)
+        const totalCompletions = habits.reduce((sum, habit) => sum + (habit.streak || 0), 0);
+
+        // Находим максимальный streak
+        const bestStreak = habits.reduce((max, habit) => Math.max(max, habit.streak || 0), 0);
+
+        // 4. Обновляем DOM
+        document.getElementById('stat-points').textContent = userData.points || 0;
+        document.getElementById('stat-best-streak').textContent = bestStreak;
+        document.getElementById('stat-total-completions').textContent = totalCompletions;
+        document.getElementById('stat-habits-count').textContent = habitsCount;
+
+    } catch (error) {
+        console.error('Ошибка при загрузке статистики:', error);
+    }
+}
+
 // Загрузка рейтинга
 async function loadLeaderboard() {
     try {
@@ -244,24 +293,30 @@ async function initApp() {
         return;
     }
     
-    // Регистрируем пользователя
     try {
-        await fetch(`${API_BASE}/api/user`, {
+        // Создаем/получаем пользователя
+        const userResponse = await fetch(`${API_BASE}/api/user`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                telegram_id: telegramId
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegram_id: telegramId })
         });
+        
+        const userData = await userResponse.json();
+        console.log('Пользователь создан/получен:', userData);
+        
+        // Загружаем привычки
+        await loadHabits();
+        
+        // Загружаем очки
+        document.getElementById('points').textContent = userData.points;
+
+        // ===== ВАЖНО: Загружаем статистику =====
+        await loadStatistics();
+        
     } catch (error) {
-        console.error('Error creating user:', error);
+        console.error('Ошибка при инициализации:', error);
+        showError('Ошибка при подключении к серверу');
     }
-    
-    // Загружаем данные
-    await loadHabits();
-    await loadUserPoints();
 }
 
 // Обработчики событий
@@ -300,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             input.value = '';
             await loadHabits();
+            await loadStatistics();
             
         } catch (error) {
             console.error('Error adding habit:', error);

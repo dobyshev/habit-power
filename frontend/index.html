@@ -1,97 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Habit Power</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="app">
-        <div class="header">
-            <h1>Habit Power</h1>
-            <button class="leaderboard-btn" id="leaderboardBtn">🏆 Рейтинг</button>
-        </div>
-        
-       <!-- ===== РАСКРЫВАЮЩИЙСЯ БЛОК СТАТИСТИКИ ===== -->
-<div class="stats-wrapper">
-    <div class="stats-header" id="statsToggle">
-        <span class="stats-title">
+      <div class="header">
+        <h1>Habit Power</h1>
+        <button class="leaderboard-btn" id="leaderboardBtn">🏆 Рейтинг</button>
+      </div>
+
+      <!-- ===== РАСКРЫВАЮЩИЙСЯ БЛОК СТАТИСТИКИ ===== -->
+      <div class="stats-wrapper">
+        <div class="stats-header" id="statsToggle">
+          <span class="stats-title">
             <span class="stats-icon">📊</span>
             Статистика
-        </span>
-        <span class="stats-arrow" id="statsArrow">▼</span>
-    </div>
-    
-    <div class="stats-collapsible" id="statsContent">
-        <div class="stats-card">
+          </span>
+          <span class="stats-arrow" id="statsArrow">▼</span>
+        </div>
+
+        <div class="stats-collapsible" id="statsContent">
+          <div class="stats-card">
             <div class="stats-grid">
-                <!-- 1️⃣ Очки пользователя -->
-                <div class="stat-item">
-                    <div class="stat-label">
-                        <span class="stat-icon">⭐</span>
-                        <span>Очки</span>
-                    </div>
-                    <div class="stat-value" id="stat-points">0</div>
+              <!-- 1️⃣ Очки пользователя -->
+              <div class="stat-item">
+                <div class="stat-label">
+                  <span class="stat-icon">⭐</span>
+                  <span>Очки</span>
                 </div>
-                <!-- 2️⃣ Лучший streak -->
-                <div class="stat-item">
-                    <div class="stat-label">
-                        <span class="stat-icon">🔥</span>
-                        <span>Лучший streak</span>
-                    </div>
-                    <div class="stat-value" id="stat-best-streak">0</div>
+                <div class="stat-value" id="stat-points">0</div>
+              </div>
+              <!-- 2️⃣ Лучший streak -->
+              <div class="stat-item">
+                <div class="stat-label">
+                  <span class="stat-icon">🔥</span>
+                  <span>Лучший streak</span>
                 </div>
-                <!-- 3️⃣ Всего выполнений -->
-                <div class="stat-item">
-                    <div class="stat-label">
-                        <span class="stat-icon">📅</span>
-                        <span>Выполнено</span>
-                    </div>
-                    <div class="stat-value" id="stat-total-completions">0</div>
+                <div class="stat-value" id="stat-best-streak">0</div>
+              </div>
+              <!-- 3️⃣ Всего выполнений -->
+              <div class="stat-item">
+                <div class="stat-label">
+                  <span class="stat-icon">📅</span>
+                  <span>Выполнено</span>
                 </div>
-                <!-- 4️⃣ Количество привычек -->
-                <div class="stat-item">
-                    <div class="stat-label">
-                        <span class="stat-icon">📋</span>
-                        <span>Привычек</span>
-                    </div>
-                    <div class="stat-value" id="stat-habits-count">0</div>
+                <div class="stat-value" id="stat-total-completions">0</div>
+              </div>
+              <!-- 4️⃣ Количество привычек -->
+              <div class="stat-item">
+                <div class="stat-label">
+                  <span class="stat-icon">📋</span>
+                  <span>Привычек</span>
                 </div>
+                <div class="stat-value" id="stat-habits-count">0</div>
+              </div>
             </div>
+          </div>
         </div>
-    </div>
-</div>
-<!-- ===== КОНЕЦ БЛОКА СТАТИСТИКИ ===== -->
-        
+      </div>
+      <!-- ===== КОНЕЦ БЛОКА СТАТИСТИКИ ===== -->
+
+      <!-- ===== НОВЫЙ БЛОК "МОИ ПРИВЫЧКИ" ===== -->
+      <div class="habits-section">
+        <div class="section-header">
+          <h2>Мои привычки</h2>
+          <span class="habits-counter" id="habitsCounter">0 привычек</span>
+        </div>
+
+        <!-- Контейнер для карточек привычек -->
         <div class="habits-container" id="habitsContainer">
-            <!-- Карточки привычек будут здесь -->
+          <!-- Карточки будут загружаться сюда -->
+          <div class="empty-state" id="emptyState">
+            <p>✨ Добавьте свою первую привычку</p>
+          </div>
         </div>
-        
-        <div class="add-habit-form">
-            <input type="text" id="habitName" placeholder="Новая привычка..." maxlength="50">
-            <button class="add-btn" id="addHabitBtn">+ Добавить</button>
-        </div>
-        
-        <div class="points-display">
-            <span>Очки:</span>
-            <span id="points">0</span>
-        </div>
+      </div>
+      <!-- ===== КОНЕЦ БЛОКА "МОИ ПРИВЫЧКИ" ===== -->
+
+      <div class="add-habit-form">
+        <input
+          type="text"
+          id="habitName"
+          placeholder="Новая привычка..."
+          maxlength="50"
+        />
+        <button class="add-btn" id="addHabitBtn">+ Добавить</button>
+      </div>
+
+      <div class="points-display">
+        <span>Очки:</span>
+        <span id="points">0</span>
+      </div>
     </div>
-    
+
     <div class="modal" id="leaderboardModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🏆 Рейтинг</h2>
-                <button class="close-btn" id="closeModalBtn">&times;</button>
-            </div>
-            <div class="leaderboard-list" id="leaderboardList">
-                <!-- Список рейтинга будет здесь -->
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>🏆 Рейтинг</h2>
+          <button class="close-btn" id="closeModalBtn">&times;</button>
         </div>
+        <div class="leaderboard-list" id="leaderboardList">
+          <!-- Список рейтинга будет здесь -->
+        </div>
+      </div>
     </div>
-    
+
     <script src="script.js"></script>
-</body>
+  </body>
 </html>

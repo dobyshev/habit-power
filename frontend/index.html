@@ -65,23 +65,32 @@
       </div>
       <!-- ===== КОНЕЦ БЛОКА СТАТИСТИКИ ===== -->
 
-      <!-- ===== НОВЫЙ БЛОК "МОИ ПРИВЫЧКИ" ===== -->
-      <div class="habits-section">
-        <div class="section-header">
-          <h2>Мои привычки</h2>
-          <span class="habits-counter" id="habitsCounter">0 привычек</span>
+      <!-- ===== РАСКРЫВАЮЩИЙСЯ БЛОК "МОИ ПРИВЫЧКИ" ===== -->
+      <div class="habits-wrapper">
+        <div class="habits-header" id="habitsToggle">
+          <span class="habits-title">
+            <span class="habits-title-icon">📋</span>
+            Мои привычки
+          </span>
+          <div style="display: flex; align-items: center; gap: 12px">
+            <span class="habits-counter" id="habitsCounter">0 привычек</span>
+            <span class="habits-arrow" id="habitsArrow">▼</span>
+          </div>
         </div>
 
-        <!-- Контейнер для карточек привычек -->
-        <div class="habits-container" id="habitsContainer">
-          <!-- Карточки будут загружаться сюда -->
-          <div class="empty-state" id="emptyState">
-            <p>✨ Добавьте свою первую привычку</p>
+        <div class="habits-collapsible" id="habitsContent">
+          <div class="habits-section">
+            <!-- Контейнер для карточек привычек -->
+            <div class="habits-container" id="habitsContainer">
+              <!-- Карточки будут загружаться сюда -->
+              <div class="empty-state" id="emptyState">
+                <p>✨ Добавьте свою первую привычку</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
       <!-- ===== КОНЕЦ БЛОКА "МОИ ПРИВЫЧКИ" ===== -->
-
       <div class="add-habit-form">
         <input
           type="text"

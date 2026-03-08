@@ -93,7 +93,7 @@ function getHabitWord(count) {
   return "привычек";
 }
 
-// Создание карточки привычки
+// Создание карточки привычки (обновленная версия)
 function createHabitCard(habit) {
   const card = document.createElement("div");
   card.className = "habit-card";
@@ -103,27 +103,23 @@ function createHabitCard(habit) {
   const isCompleted = habit.completed_today || false;
 
   card.innerHTML = `
-        <div class="habit-emoji">${emoji}</div>
+        <div class="habit-emoji ${isCompleted ? "completed" : ""}" id="habitEmoji-${habit.id}">${emoji}</div>
         <div class="habit-info">
             <div class="habit-name">${habit.name}</div>
             <div class="habit-streak">
                 <span>🔥 Серия:</span>
-                <span class="streak-number">${habit.streak} дней</span>
+                <span class="streak-number" id="streak-${habit.id}">${habit.streak} дней</span>
             </div>
         </div>
         <div class="habit-actions">
-            <button class="complete-btn ${isCompleted ? "completed" : ""}" 
-                    ${isCompleted ? "disabled" : ""}>
-                ${isCompleted ? "Выполнено" : "Выполнить"}
-            </button>
             <button class="delete-btn">🗑</button>
         </div>
     `;
 
-  // Обработчик выполнения
-  const completeBtn = card.querySelector(".complete-btn");
-  completeBtn.addEventListener("click", async () => {
-    if (completeBtn.classList.contains("completed")) return;
+  // Обработчик выполнения на эмодзи
+  const emojiDiv = card.querySelector(".habit-emoji");
+  emojiDiv.addEventListener("click", async () => {
+    if (emojiDiv.classList.contains("completed")) return;
 
     try {
       const response = await fetch(`${API_BASE}/api/complete-habit`, {
@@ -139,9 +135,7 @@ function createHabitCard(habit) {
         const error = await response.json();
         if (error.detail === "already_done") {
           showError("Уже выполнено сегодня");
-          completeBtn.classList.add("completed");
-          completeBtn.disabled = true;
-          completeBtn.textContent = "Выполнено";
+          emojiDiv.classList.add("completed");
         }
         return;
       }
@@ -149,21 +143,24 @@ function createHabitCard(habit) {
       const data = await response.json();
       console.log("✅ Привычка выполнена:", data);
 
-      completeBtn.classList.add("completed");
-      completeBtn.disabled = true;
-      completeBtn.textContent = "Выполнено";
+      emojiDiv.classList.add("completed");
 
-      const streakSpan = card.querySelector(".streak-number");
-      streakSpan.textContent = `${data.streak} дней`;
+      const streakSpan = document.getElementById(`streak-${habit.id}`);
+      if (streakSpan) {
+        streakSpan.textContent = `${data.streak} дней`;
+      }
 
       document.getElementById("points").textContent = data.points;
+      
+      // Обновляем статистику
+      await loadStatistics();
     } catch (error) {
       console.error("Ошибка выполнения:", error);
       showError("Не удалось отметить выполнение");
     }
   });
 
-  // Обработчик удаления
+  // Обработчик удаления (без изменений)
   const deleteBtn = card.querySelector(".delete-btn");
   deleteBtn.addEventListener("click", async () => {
     if (confirm("Удалить привычку?")) {
@@ -183,11 +180,12 @@ function createHabitCard(habit) {
             document.getElementById("emptyState").style.display = "block";
           }
 
-          // Обновляем счетчик
+          // Обновляем счетчик и статистику
           const habits = await fetch(
             `${API_BASE}/api/habits/${telegramId}`,
           ).then((r) => r.json());
           updateHabitsCounter(habits.length);
+          await loadStatistics();
         }
       } catch (error) {
         console.error("Ошибка удаления:", error);
@@ -197,66 +195,6 @@ function createHabitCard(habit) {
   });
 
   return card;
-}
-
-// Загрузка привычек
-async function loadHabits() {
-  if (!telegramId) return;
-
-  try {
-    const response = await fetch(`${API_BASE}/api/habits/${telegramId}`);
-    if (!response.ok) {
-      console.error("Ошибка загрузки привычек:", response.status);
-      return;
-    }
-
-    const habits = await response.json();
-    console.log("📋 Загружены привычки:", habits);
-
-    const container = document.getElementById("habitsContainer");
-    const emptyState = document.getElementById("emptyState");
-
-    if (habits.length === 0) {
-      emptyState.style.display = "block";
-      container.innerHTML = "";
-      container.appendChild(emptyState);
-    } else {
-      emptyState.style.display = "none";
-      container.innerHTML = "";
-      habits.forEach((habit) => {
-        container.appendChild(createHabitCard(habit));
-      });
-    }
-
-    updateHabitsCounter(habits.length);
-  } catch (error) {
-    console.error("Ошибка загрузки привычек:", error);
-    showError("Не удалось загрузить привычки");
-  }
-}
-
-// Загрузка очков пользователя
-async function loadUserPoints() {
-  try {
-    const response = await fetch(`${API_BASE}/api/habits/${telegramId}`);
-    const habits = await response.json();
-
-    // Получаем очки через отдельный запрос или вычисляем
-    const pointsResponse = await fetch(`${API_BASE}/api/user`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        telegram_id: telegramId,
-      }),
-    });
-
-    const userData = await pointsResponse.json();
-    document.getElementById("points").textContent = userData.points;
-  } catch (error) {
-    console.error("Error loading points:", error);
-  }
 }
 
 // ===== НОВАЯ ФУНКЦИЯ ДЛЯ ЗАГРУЗКИ И ОБНОВЛЕНИЯ СТАТИСТИКИ =====
@@ -378,6 +316,13 @@ async function initApp() {
 document.addEventListener("DOMContentLoaded", () => {
   initApp();
 
+  // ... остальные обработчики ...
+
+  // Инициализируем сворачивание статистики и привычек
+  initStatsToggle();
+  initHabitsToggle();
+});
+
   // Добавление привычки
   document.getElementById("addHabitBtn").addEventListener("click", async () => {
     const input = document.getElementById("habitName");
@@ -484,3 +429,36 @@ document.addEventListener("DOMContentLoaded", () => {
   // Инициализируем сворачивание статистики
   initStatsToggle();
 });
+
+// ===== ЛОГИКА ДЛЯ РАСКРЫВАЮЩЕГОСЯ БЛОКА ПРИВЫЧЕК =====
+function initHabitsToggle() {
+  const habitsHeader = document.getElementById("habitsToggle");
+  const habitsContent = document.getElementById("habitsContent");
+  const habitsArrow = document.getElementById("habitsArrow");
+
+  if (!habitsHeader || !habitsContent || !habitsArrow) return;
+
+  // Проверяем, сохранено ли состояние в localStorage
+  const isHabitsOpen = localStorage.getItem("habitsOpen") !== "false"; // По умолчанию открыто
+
+  // Устанавливаем начальное состояние
+  if (isHabitsOpen) {
+    habitsContent.classList.add("open");
+    habitsArrow.classList.add("rotated");
+  }
+
+  // Обработчик клика
+  habitsHeader.addEventListener("click", () => {
+    const isOpen = habitsContent.classList.contains("open");
+
+    if (isOpen) {
+      habitsContent.classList.remove("open");
+      habitsArrow.classList.remove("rotated");
+      localStorage.setItem("habitsOpen", "false");
+    } else {
+      habitsContent.classList.add("open");
+      habitsArrow.classList.add("rotated");
+      localStorage.setItem("habitsOpen", "true");
+    }
+  });
+}

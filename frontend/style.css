@@ -536,3 +536,203 @@ body {
   color: #b0b0b0;
   border: 1px solid #2a2a2a;
 }
+
+/* ===== РАСКРЫВАЮЩИЙСЯ БЛОК ПРИВЫЧЕК ===== */
+.habits-wrapper {
+  margin-bottom: 30px;
+  background-color: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.habits-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s ease;
+}
+
+.habits-header:hover {
+  background-color: #242424;
+}
+
+.habits-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.habits-title-icon {
+  font-size: 22px;
+}
+
+.habits-arrow {
+  font-size: 14px;
+  color: #b0b0b0;
+  transition: transform 0.3s ease;
+}
+
+.habits-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.habits-collapsible {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+  background-color: #1a1a1a;
+}
+
+.habits-collapsible.open {
+  max-height: 800px; /* Достаточно для контента */
+  transition: max-height 0.5s ease-in;
+}
+
+/* Обновленные стили для habits-section */
+.habits-section {
+  padding: 0 20px 20px 20px;
+  border-top: 1px solid #2a2a2a;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.section-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.habits-counter {
+  background-color: #242424;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #b0b0b0;
+  border: 1px solid #2a2a2a;
+}
+
+/* Обновленная карточка привычки */
+.habit-card {
+  background-color: #242424;
+  border: 1px solid #2a2a2a;
+  border-radius: 22px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  animation: slideIn 0.3s ease;
+  transition: all 0.2s ease;
+}
+
+.habit-card:hover {
+  border-color: #3a3a3a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Эмодзи теперь кликабельное */
+.habit-emoji {
+  font-size: 36px;
+  min-width: 52px;
+  height: 52px;
+  background-color: #1a1a1a;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #2a2a2a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.habit-emoji:hover {
+  background-color: #2ecc71;
+  border-color: #2ecc71;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+}
+
+.habit-emoji.completed {
+  background-color: #2ecc71;
+  border-color: #2ecc71;
+  cursor: default;
+  opacity: 0.9;
+}
+
+.habit-emoji.completed:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.habit-info {
+  flex: 1;
+}
+
+.habit-name {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #ffffff;
+}
+
+.habit-streak {
+  font-size: 14px;
+  color: #b0b0b0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.streak-number {
+  color: #2ecc71;
+  font-weight: 600;
+  background-color: rgba(46, 204, 113, 0.1);
+  padding: 2px 8px;
+  border-radius: 30px;
+}
+
+/* Обновленные действия - только кнопка удаления */
+.habit-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.delete-btn {
+  background-color: transparent;
+  color: #e74c3c;
+  border: 1px solid #2a2a2a;
+  width: 44px;
+  height: 44px;
+  border-radius: 30px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-btn:hover {
+  background-color: rgba(231, 76, 60, 0.1);
+  border-color: #e74c3c;
+  transform: translateY(-1px);
+}
+
+.delete-btn:active {
+  transform: translateY(0);
+}

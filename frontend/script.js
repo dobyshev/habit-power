@@ -1,20 +1,25 @@
-let telegramId = null;
-let tg = null;
+// Для тестирования без Telegram
+let telegramId = 123456789;  // Просто задаем тестовый ID
 
-// Инициализация Telegram WebApp
-try {
-    tg = window.Telegram.WebApp;
-    tg.expand(); // Разворачиваем на весь экран
+console.log('Тестовый режим, ID:', telegramId);
+
+// let telegramId = null;
+// let tg = null;
+
+// // Инициализация Telegram WebApp
+// try {
+//     tg = window.Telegram.WebApp;
+//     tg.expand(); // Разворачиваем на весь экран
     
-    // Получаем ID пользователя
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        telegramId = tg.initDataUnsafe.user.id;
-    }
-} catch (e) {
-    console.log('Telegram WebApp not available');
-    // Для локальной разработки
-    telegramId = 123456789;
-}
+//     // Получаем ID пользователя
+//     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+//         telegramId = tg.initDataUnsafe.user.id;
+//     }
+// } catch (e) {
+//     console.log('Telegram WebApp not available');
+//     // Для локальной разработки
+//     telegramId = 123456789;
+// }
 
 // API базовый URL
 const API_BASE = '';

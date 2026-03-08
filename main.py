@@ -35,6 +35,9 @@ class HabitCreate(BaseModel):
     telegram_id: int
     name: str
 
+    class Config:
+        from_attributes = True
+
 
 class HabitDelete(BaseModel):
     habit_id: int

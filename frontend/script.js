@@ -93,7 +93,8 @@ function getHabitWord(count) {
   return "привычек";
 }
 
-// Создание карточки привычки (обновленная версия)
+// Создание карточки привычки (с отменой выполнения)
+// Создание карточки привычки (с отменой выполнения и визуальными эффектами)
 function createHabitCard(habit) {
   const card = document.createElement("div");
   card.className = "habit-card";
@@ -103,9 +104,11 @@ function createHabitCard(habit) {
   const isCompleted = habit.completed_today || false;
 
   card.innerHTML = `
-        <div class="habit-emoji ${isCompleted ? "completed" : ""}" id="habitEmoji-${habit.id}">${emoji}</div>
+        <div class="habit-emoji ${isCompleted ? "completed" : ""}" id="habitEmoji-${habit.id}">
+            ${isCompleted ? "✅" : emoji}
+        </div>
         <div class="habit-info">
-            <div class="habit-name">${habit.name}</div>
+            <div class="habit-name ${isCompleted ? "completed-text" : ""}">${habit.name}</div>
             <div class="habit-streak">
                 <span>🔥 Серия:</span>
                 <span class="streak-number" id="streak-${habit.id}">${habit.streak} дней</span>
@@ -116,47 +119,93 @@ function createHabitCard(habit) {
         </div>
     `;
 
-  // Обработчик выполнения на эмодзи
+  // Обработчик выполнения/отмены на эмодзи
   const emojiDiv = card.querySelector(".habit-emoji");
+  const nameDiv = card.querySelector(".habit-name");
+
   emojiDiv.addEventListener("click", async () => {
-    if (emojiDiv.classList.contains("completed")) return;
+    const isCurrentlyCompleted = emojiDiv.classList.contains("completed");
+    console.log(
+      "Текущее состояние:",
+      isCurrentlyCompleted ? "выполнено" : "не выполнено",
+    );
 
     try {
-      const response = await fetch(`${API_BASE}/api/complete-habit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          habit_id: habit.id,
-          telegram_id: telegramId,
-        }),
-      });
+      let response;
+      let data;
+
+      if (isCurrentlyCompleted) {
+        // ОТМЕНА выполнения
+        console.log("Отмена выполнения для habit_id:", habit.id);
+        response = await fetch(`${API_BASE}/api/undo-habit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            habit_id: habit.id,
+            telegram_id: telegramId,
+          }),
+        });
+      } else {
+        // ВЫПОЛНЕНИЕ
+        console.log("Выполнение habit_id:", habit.id);
+        response = await fetch(`${API_BASE}/api/complete-habit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            habit_id: habit.id,
+            telegram_id: telegramId,
+          }),
+        });
+      }
 
       if (!response.ok) {
         const error = await response.json();
+        console.error("Ошибка ответа:", error);
+
         if (error.detail === "already_done") {
           showError("Уже выполнено сегодня");
-          emojiDiv.classList.add("completed");
+        } else if (error.detail === "not_done_today") {
+          showError("Нельзя отменить - сегодня не выполняли");
         }
         return;
       }
 
-      const data = await response.json();
-      console.log("✅ Привычка выполнена:", data);
+      data = await response.json();
+      console.log(
+        isCurrentlyCompleted
+          ? "↩️ Выполнение отменено:"
+          : "✅ Привычка выполнена:",
+        data,
+      );
 
-      emojiDiv.classList.add("completed");
+      // Переключаем класс completed и меняем содержимое эмодзи
+      if (isCurrentlyCompleted) {
+        emojiDiv.classList.remove("completed");
+        emojiDiv.textContent = emoji; // Возвращаем оригинальный эмодзи
+        nameDiv.classList.remove("completed-text");
+      } else {
+        emojiDiv.classList.add("completed");
+        emojiDiv.textContent = "✅"; // Ставим зеленую галочку
+        nameDiv.classList.add("completed-text");
+      }
 
+      // Обновляем streak
       const streakSpan = document.getElementById(`streak-${habit.id}`);
       if (streakSpan) {
         streakSpan.textContent = `${data.streak} дней`;
       }
 
+      // Обновляем очки
       document.getElementById("points").textContent = data.points;
 
       // Обновляем статистику
       await loadStatistics();
+
+      // Обновляем habit.completed_today для будущих кликов
+      habit.completed_today = !isCurrentlyCompleted;
     } catch (error) {
-      console.error("Ошибка выполнения:", error);
-      showError("Не удалось отметить выполнение");
+      console.error("Ошибка:", error);
+      showError("Не удалось обновить привычку");
     }
   });
 

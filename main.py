@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from datetime import date
+from datetime import date, datetime
 from typing import List
 from pydantic import BaseModel
 
@@ -22,6 +22,8 @@ app.add_middleware(
         "https://web.telegram.org",
         "https://t.me",
         "https://telegram.org",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -41,15 +43,17 @@ class HabitCreate(BaseModel):
     telegram_id: int
     name: str
 
-    class Config:
-        from_attributes = True
-
 
 class HabitDelete(BaseModel):
     habit_id: int
 
 
 class HabitComplete(BaseModel):
+    habit_id: int
+    telegram_id: int
+
+
+class HabitUndo(BaseModel):
     habit_id: int
     telegram_id: int
 
@@ -177,6 +181,53 @@ async def complete_habit(habit_data: HabitComplete, db: Session = Depends(get_db
     db.commit()
 
     return {"status": "success", "points": user.points, "streak": habit.streak}
+
+
+@app.post("/api/undo-habit")
+async def undo_habit(habit_data: HabitUndo, db: Session = Depends(get_db)):
+    """Отменяет выполнение привычки"""
+    # Получаем привычку
+    habit = db.query(Habit).filter(Habit.id == habit_data.habit_id).first()
+    if not habit:
+        raise HTTPException(status_code=404, detail="Habit not found")
+
+    # Получаем пользователя
+    user = db.query(User).filter(User.telegram_id == habit_data.telegram_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    today = date.today()
+
+    # Проверяем, выполнялась ли привычка сегодня
+    existing_completion = (
+        db.query(Completion)
+        .filter(Completion.habit_id == habit.id, Completion.date == today)
+        .first()
+    )
+
+    if not existing_completion:
+        raise HTTPException(status_code=400, detail="not_done_today")
+
+    # Удаляем запись о выполнении
+    db.delete(existing_completion)
+
+    # Уменьшаем streak (но не ниже 0)
+    if habit.streak > 0:
+        habit.streak -= 1
+
+    # Отнимаем очки у пользователя (но не ниже 0)
+    if user.points >= 10:
+        user.points -= 10
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "habit_id": habit.id,
+        "streak": habit.streak,
+        "points": user.points,
+        "completed_today": False,
+    }
 
 
 @app.get("/api/leaderboard", response_model=List[LeaderboardResponse])

@@ -18,9 +18,10 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://habit-power-api.onrender.com",  # ваш домен
-        "https://web.telegram.org",  # Telegram Web
-        "https://t.me",  # Telegram
+        "https://habit-power-api.onrender.com",
+        "https://web.telegram.org",
+        "https://t.me",
+        "https://telegram.org",
     ],
     allow_credentials=True,
     allow_methods=["*"],

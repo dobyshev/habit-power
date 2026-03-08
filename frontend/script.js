@@ -244,9 +244,9 @@ async function initApp() {
         return;
     }
     
-    // Регистрируем пользователя
     try {
-        await fetch(`${API_BASE}/api/user`, {
+        // СНАЧАЛА создаем/получаем пользователя
+        const userResponse = await fetch(`${API_BASE}/api/user`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -255,13 +255,18 @@ async function initApp() {
                 telegram_id: telegramId
             })
         });
+        
+        const userData = await userResponse.json();
+        console.log('Пользователь создан/получен:', userData);
+        
+        // ТОЛЬКО ПОТОМ загружаем привычки
+        await loadHabits();
+        await loadUserPoints();
+        
     } catch (error) {
-        console.error('Error creating user:', error);
+        console.error('Ошибка при инициализации:', error);
+        showError('Ошибка при подключении к серверу');
     }
-    
-    // Загружаем данные
-    await loadHabits();
-    await loadUserPoints();
 }
 
 // Обработчики событий

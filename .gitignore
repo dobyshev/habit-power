@@ -1,0 +1,29 @@
+# Виртуальное окружение
+venv/
+env/
+ENV/
+
+# База данных
+*.db
+*.db-journal
+
+# Файлы Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
+# Файлы окружения
+.env
+.env.local
+.env.production
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Системные файлы
+.DS_Store
+Thumbs.db

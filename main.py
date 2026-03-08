@@ -17,7 +17,12 @@ app = FastAPI()
 # CORS для локальной разработки
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://habit-power-api.onrender.com",  # ваш домен
+        "https://web.telegram.org",  # Telegram Web
+        "https://t.me",  # Telegram
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

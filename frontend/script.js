@@ -387,3 +387,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// ===== ЛОГИКА ДЛЯ РАСКРЫВАЮЩЕГОСЯ БЛОКА СТАТИСТИКИ =====
+function initStatsToggle() {
+    const statsHeader = document.getElementById('statsToggle');
+    const statsContent = document.getElementById('statsContent');
+    const statsArrow = document.getElementById('statsArrow');
+    
+    if (!statsHeader || !statsContent || !statsArrow) return;
+    
+    // Проверяем, сохранено ли состояние в localStorage
+    const isStatsOpen = localStorage.getItem('statsOpen') === 'true';
+    
+    // Устанавливаем начальное состояние
+    if (isStatsOpen) {
+        statsContent.classList.add('open');
+        statsArrow.classList.add('rotated');
+    }
+    
+    // Обработчик клика
+    statsHeader.addEventListener('click', () => {
+        const isOpen = statsContent.classList.contains('open');
+        
+        if (isOpen) {
+            statsContent.classList.remove('open');
+            statsArrow.classList.remove('rotated');
+            localStorage.setItem('statsOpen', 'false');
+        } else {
+            statsContent.classList.add('open');
+            statsArrow.classList.add('rotated');
+            localStorage.setItem('statsOpen', 'true');
+        }
+    });
+}
+
+// Вызываем функцию после загрузки DOM
+document.addEventListener('DOMContentLoaded', () => {
+    // ... ваш существующий код ...
+    
+    // Инициализируем сворачивание статистики
+    initStatsToggle();
+});

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Power</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <h1>Habit Power</h1>
+            <button class="leaderboard-btn" id="leaderboardBtn">🏆 Рейтинг</button>
+        </div>
+        
+        <div class="habits-container" id="habitsContainer">
+            <!-- Карточки привычек будут здесь -->
+        </div>
+        
+        <div class="add-habit-form">
+            <input type="text" id="habitName" placeholder="Новая привычка..." maxlength="50">
+            <button class="add-btn" id="addHabitBtn">+ Добавить</button>
+        </div>
+        
+        <div class="points-display">
+            <span>Очки:</span>
+            <span id="points">0</span>
+        </div>
+    </div>
+    
+    <div class="modal" id="leaderboardModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🏆 Рейтинг</h2>
+                <button class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="leaderboard-list" id="leaderboardList">
+                <!-- Список рейтинга будет здесь -->
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

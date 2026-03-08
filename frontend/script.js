@@ -199,10 +199,15 @@ function createHabitCard(habit) {
 
 // Загрузка привычек
 async function loadHabits() {
-  if (!telegramId) return;
+  if (!telegramId) {
+    console.error("loadHabits: telegramId отсутствует");
+    return;
+  }
 
   try {
+    console.log("Загрузка привычек для telegramId:", telegramId);
     const response = await fetch(`${API_BASE}/api/habits/${telegramId}`);
+
     if (!response.ok) {
       console.error("Ошибка загрузки привычек:", response.status);
       return;
@@ -214,20 +219,33 @@ async function loadHabits() {
     const container = document.getElementById("habitsContainer");
     const emptyState = document.getElementById("emptyState");
 
+    if (!container) {
+      console.error("Контейнер habitsContainer не найден");
+      return;
+    }
+
     // Очищаем контейнер
     container.innerHTML = "";
 
-    if (habits.length === 0) {
-      emptyState.style.display = "block";
-      container.appendChild(emptyState);
+    if (!habits || habits.length === 0) {
+      console.log("Нет привычек, показываем пустое состояние");
+      if (emptyState) {
+        emptyState.style.display = "block";
+        container.appendChild(emptyState);
+      }
     } else {
-      emptyState.style.display = "none";
+      console.log(`Создаем ${habits.length} карточек привычек`);
+      if (emptyState) {
+        emptyState.style.display = "none";
+      }
+
       habits.forEach((habit) => {
-        container.appendChild(createHabitCard(habit));
+        const card = createHabitCard(habit);
+        container.appendChild(card);
       });
     }
 
-    updateHabitsCounter(habits.length);
+    updateHabitsCounter(habits ? habits.length : 0);
   } catch (error) {
     console.error("Ошибка загрузки привычек:", error);
     showError("Не удалось загрузить привычки");
@@ -476,26 +494,21 @@ document.addEventListener("DOMContentLoaded", () => {
           }),
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-          const error = await response.json();
-          if (error.detail === "Maximum habits limit (10) reached") {
+          if (data.detail === "Maximum habits limit (10) reached") {
             showError("Максимум 10 привычек");
           }
           return;
         }
 
+        console.log("Привычка добавлена:", data);
         input.value = "";
-        await loadHabits(); // Загружаем привычки заново
-        await loadStatistics(); // Обновляем статистику
 
-        // Принудительно открываем блок привычек если он закрыт
-        const habitsContent = document.getElementById("habitsContent");
-        const habitsArrow = document.getElementById("habitsArrow");
-        if (habitsContent && !habitsContent.classList.contains("open")) {
-          habitsContent.classList.add("open");
-          habitsArrow.classList.add("rotated");
-          localStorage.setItem("habitsOpen", "true");
-        }
+        // Принудительно загружаем привычки заново
+        await loadHabits();
+        await loadStatistics();
       } catch (error) {
         console.error("Error adding habit:", error);
         showError("Ошибка при добавлении привычки");

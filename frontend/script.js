@@ -151,7 +151,7 @@ function createHabitCard(habit) {
       }
 
       document.getElementById("points").textContent = data.points;
-      
+
       // Обновляем статистику
       await loadStatistics();
     } catch (error) {
@@ -160,7 +160,7 @@ function createHabitCard(habit) {
     }
   });
 
-  // Обработчик удаления (без изменений)
+  // Обработчик удаления
   const deleteBtn = card.querySelector(".delete-btn");
   deleteBtn.addEventListener("click", async () => {
     if (confirm("Удалить привычку?")) {
@@ -197,7 +197,67 @@ function createHabitCard(habit) {
   return card;
 }
 
-// ===== НОВАЯ ФУНКЦИЯ ДЛЯ ЗАГРУЗКИ И ОБНОВЛЕНИЯ СТАТИСТИКИ =====
+// Загрузка привычек
+async function loadHabits() {
+  if (!telegramId) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/habits/${telegramId}`);
+    if (!response.ok) {
+      console.error("Ошибка загрузки привычек:", response.status);
+      return;
+    }
+
+    const habits = await response.json();
+    console.log("📋 Загружены привычки:", habits);
+
+    const container = document.getElementById("habitsContainer");
+    const emptyState = document.getElementById("emptyState");
+
+    if (habits.length === 0) {
+      emptyState.style.display = "block";
+      container.innerHTML = "";
+      container.appendChild(emptyState);
+    } else {
+      emptyState.style.display = "none";
+      container.innerHTML = "";
+      habits.forEach((habit) => {
+        container.appendChild(createHabitCard(habit));
+      });
+    }
+
+    updateHabitsCounter(habits.length);
+  } catch (error) {
+    console.error("Ошибка загрузки привычек:", error);
+    showError("Не удалось загрузить привычки");
+  }
+}
+
+// Загрузка очков пользователя
+async function loadUserPoints() {
+  try {
+    const response = await fetch(`${API_BASE}/api/habits/${telegramId}`);
+    const habits = await response.json();
+
+    // Получаем очки через отдельный запрос или вычисляем
+    const pointsResponse = await fetch(`${API_BASE}/api/user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        telegram_id: telegramId,
+      }),
+    });
+
+    const userData = await pointsResponse.json();
+    document.getElementById("points").textContent = userData.points;
+  } catch (error) {
+    console.error("Error loading points:", error);
+  }
+}
+
+// ===== ФУНКЦИЯ ДЛЯ ЗАГРУЗКИ И ОБНОВЛЕНИЯ СТАТИСТИКИ =====
 async function loadStatistics() {
   if (!telegramId) return;
 
@@ -295,7 +355,7 @@ async function initApp() {
     // Загружаем привычки
     await loadHabits();
 
-    // Добавьте эту строку для начального обновления счетчика
+    // Обновляем счетчик
     const habits = await fetch(`${API_BASE}/api/habits/${telegramId}`).then(
       (r) => r.json(),
     );
@@ -304,90 +364,13 @@ async function initApp() {
     // Загружаем очки
     document.getElementById("points").textContent = userData.points;
 
-    // ===== ВАЖНО: Загружаем статистику =====
+    // Загружаем статистику
     await loadStatistics();
   } catch (error) {
     console.error("Ошибка при инициализации:", error);
     showError("Ошибка при подключении к серверу");
   }
 }
-
-// Обработчики событий
-document.addEventListener("DOMContentLoaded", () => {
-  initApp();
-
-  // ... остальные обработчики ...
-
-  // Инициализируем сворачивание статистики и привычек
-  initStatsToggle();
-  initHabitsToggle();
-});
-
-  // Добавление привычки
-  document.getElementById("addHabitBtn").addEventListener("click", async () => {
-    const input = document.getElementById("habitName");
-    const name = input.value.trim();
-
-    if (!name) {
-      showError("Введите название привычки");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE}/api/add-habit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          telegram_id: telegramId,
-          name: name,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        if (error.detail === "Maximum habits limit (10) reached") {
-          showError("Максимум 10 привычек");
-        }
-        return;
-      }
-
-      input.value = "";
-      await loadHabits();
-      await loadStatistics();
-    } catch (error) {
-      console.error("Error adding habit:", error);
-      showError("Ошибка при добавлении привычки");
-    }
-  });
-
-  // Рейтинг
-  document
-    .getElementById("leaderboardBtn")
-    .addEventListener("click", async () => {
-      await loadLeaderboard();
-      document.getElementById("leaderboardModal").classList.add("show");
-    });
-
-  document.getElementById("closeModalBtn").addEventListener("click", () => {
-    document.getElementById("leaderboardModal").classList.remove("show");
-  });
-
-  // Закрытие модального окна по клику вне его
-  document.getElementById("leaderboardModal").addEventListener("click", (e) => {
-    if (e.target === document.getElementById("leaderboardModal")) {
-      e.target.classList.remove("show");
-    }
-  });
-
-  // Добавление привычки по Enter
-  document.getElementById("habitName").addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-      document.getElementById("addHabitBtn").click();
-    }
-  });
-});
 
 // ===== ЛОГИКА ДЛЯ РАСКРЫВАЮЩЕГОСЯ БЛОКА СТАТИСТИКИ =====
 function initStatsToggle() {
@@ -422,14 +405,6 @@ function initStatsToggle() {
   });
 }
 
-// Вызываем функцию после загрузки DOM
-document.addEventListener("DOMContentLoaded", () => {
-  // ... ваш существующий код ...
-
-  // Инициализируем сворачивание статистики
-  initStatsToggle();
-});
-
 // ===== ЛОГИКА ДЛЯ РАСКРЫВАЮЩЕГОСЯ БЛОКА ПРИВЫЧЕК =====
 function initHabitsToggle() {
   const habitsHeader = document.getElementById("habitsToggle");
@@ -438,8 +413,8 @@ function initHabitsToggle() {
 
   if (!habitsHeader || !habitsContent || !habitsArrow) return;
 
-  // Проверяем, сохранено ли состояние в localStorage
-  const isHabitsOpen = localStorage.getItem("habitsOpen") !== "false"; // По умолчанию открыто
+  // Проверяем, сохранено ли состояние в localStorage (по умолчанию открыто)
+  const isHabitsOpen = localStorage.getItem("habitsOpen") !== "false";
 
   // Устанавливаем начальное состояние
   if (isHabitsOpen) {
@@ -462,3 +437,95 @@ function initHabitsToggle() {
     }
   });
 }
+
+// Единый обработчик событий при загрузке DOM
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOM загружен, инициализация приложения...");
+
+  // Инициализируем приложение
+  initApp();
+
+  // Инициализируем сворачивание статистики
+  initStatsToggle();
+
+  // Инициализируем сворачивание привычек
+  initHabitsToggle();
+
+  // Добавление привычки
+  const addBtn = document.getElementById("addHabitBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", async () => {
+      const input = document.getElementById("habitName");
+      const name = input.value.trim();
+
+      if (!name) {
+        showError("Введите название привычки");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/add-habit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            telegram_id: telegramId,
+            name: name,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          if (error.detail === "Maximum habits limit (10) reached") {
+            showError("Максимум 10 привычек");
+          }
+          return;
+        }
+
+        input.value = "";
+        await loadHabits();
+        await loadStatistics();
+      } catch (error) {
+        console.error("Error adding habit:", error);
+        showError("Ошибка при добавлении привычки");
+      }
+    });
+  }
+
+  // Рейтинг
+  const leaderboardBtn = document.getElementById("leaderboardBtn");
+  if (leaderboardBtn) {
+    leaderboardBtn.addEventListener("click", async () => {
+      await loadLeaderboard();
+      document.getElementById("leaderboardModal").classList.add("show");
+    });
+  }
+
+  const closeBtn = document.getElementById("closeModalBtn");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      document.getElementById("leaderboardModal").classList.remove("show");
+    });
+  }
+
+  // Закрытие модального окна по клику вне его
+  const modal = document.getElementById("leaderboardModal");
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.classList.remove("show");
+      }
+    });
+  }
+
+  // Добавление привычки по Enter
+  const habitInput = document.getElementById("habitName");
+  if (habitInput) {
+    habitInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        document.getElementById("addHabitBtn").click();
+      }
+    });
+  }
+});

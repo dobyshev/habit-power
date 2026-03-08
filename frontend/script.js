@@ -214,13 +214,14 @@ async function loadHabits() {
     const container = document.getElementById("habitsContainer");
     const emptyState = document.getElementById("emptyState");
 
+    // Очищаем контейнер
+    container.innerHTML = "";
+
     if (habits.length === 0) {
       emptyState.style.display = "block";
-      container.innerHTML = "";
       container.appendChild(emptyState);
     } else {
       emptyState.style.display = "none";
-      container.innerHTML = "";
       habits.forEach((habit) => {
         container.appendChild(createHabitCard(habit));
       });
@@ -484,8 +485,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         input.value = "";
-        await loadHabits();
-        await loadStatistics();
+        await loadHabits(); // Загружаем привычки заново
+        await loadStatistics(); // Обновляем статистику
+
+        // Принудительно открываем блок привычек если он закрыт
+        const habitsContent = document.getElementById("habitsContent");
+        const habitsArrow = document.getElementById("habitsArrow");
+        if (habitsContent && !habitsContent.classList.contains("open")) {
+          habitsContent.classList.add("open");
+          habitsArrow.classList.add("rotated");
+          localStorage.setItem("habitsOpen", "true");
+        }
       } catch (error) {
         console.error("Error adding habit:", error);
         showError("Ошибка при добавлении привычки");

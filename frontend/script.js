@@ -31,17 +31,24 @@ if (!telegramId) {
 // API базовый URL
 const API_BASE = "";
 
-// Функция для показа ошибок
+// Функция для показа ошибок (исправленная)
 function showError(message) {
+  // Удаляем предыдущие ошибки
+  const existingErrors = document.querySelectorAll(".error-message");
+  existingErrors.forEach((error) => error.remove());
+
   const errorDiv = document.createElement("div");
   errorDiv.className = "error-message";
   errorDiv.textContent = message;
-  document
-    .querySelector(".app")
-    .insertBefore(errorDiv, document.querySelector(".habits-container"));
+
+  // Вставляем в начало .app
+  const app = document.querySelector(".app");
+  app.insertBefore(errorDiv, app.firstChild);
 
   setTimeout(() => {
-    errorDiv.remove();
+    if (errorDiv.parentNode) {
+      errorDiv.remove();
+    }
   }, 3000);
 }
 
@@ -93,7 +100,6 @@ function getHabitWord(count) {
   return "привычек";
 }
 
-// Создание карточки привычки (с отменой выполнения)
 // Создание карточки привычки (с отменой выполнения и визуальными эффектами)
 function createHabitCard(habit) {
   const card = document.createElement("div");
@@ -180,12 +186,16 @@ function createHabitCard(habit) {
 
       // Переключаем класс completed и меняем содержимое эмодзи
       if (isCurrentlyCompleted) {
+        // Отмена выполнения
         emojiDiv.classList.remove("completed");
         emojiDiv.textContent = emoji; // Возвращаем оригинальный эмодзи
+        emojiDiv.style.backgroundColor = ""; // Сбрасываем фон
         nameDiv.classList.remove("completed-text");
       } else {
+        // Выполнение
         emojiDiv.classList.add("completed");
         emojiDiv.textContent = "✅"; // Ставим зеленую галочку
+        emojiDiv.style.backgroundColor = "#2ecc71"; // Устанавливаем зеленый фон
         nameDiv.classList.add("completed-text");
       }
 
@@ -209,7 +219,7 @@ function createHabitCard(habit) {
     }
   });
 
-  // Обработчик удаления
+  // Обработчик удаления (исправленный)
   const deleteBtn = card.querySelector(".delete-btn");
   deleteBtn.addEventListener("click", async () => {
     if (confirm("Удалить привычку?")) {
@@ -222,18 +232,37 @@ function createHabitCard(habit) {
 
         if (response.ok) {
           console.log("🗑 Привычка удалена");
+
+          // Удаляем карточку
           card.remove();
 
           const container = document.getElementById("habitsContainer");
-          if (container.children.length === 0) {
-            document.getElementById("emptyState").style.display = "block";
+
+          // Получаем актуальный emptyState (на случай если его пересоздавали)
+          let emptyState = document.getElementById("emptyState");
+
+          // Получаем все карточки привычек
+          const habitCards = container.querySelectorAll(".habit-card");
+          const remainingHabits = habitCards.length;
+
+          if (remainingHabits === 0) {
+            // Если emptyState не существует, создаем новый
+            if (!emptyState) {
+              emptyState = document.createElement("div");
+              emptyState.id = "emptyState";
+              emptyState.className = "empty-state";
+              emptyState.innerHTML = "<p>✨ Добавьте свою первую привычку</p>";
+            }
+
+            emptyState.style.display = "block";
+            container.innerHTML = ""; // Очищаем контейнер
+            container.appendChild(emptyState);
           }
 
-          // Обновляем счетчик и статистику
-          const habits = await fetch(
-            `${API_BASE}/api/habits/${telegramId}`,
-          ).then((r) => r.json());
-          updateHabitsCounter(habits.length);
+          // Обновляем счетчик
+          updateHabitsCounter(remainingHabits);
+
+          // Обновляем статистику
           await loadStatistics();
         }
       } catch (error) {

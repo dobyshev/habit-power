@@ -5,9 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Habit Power</title>
     <script>
+      // Загружаем Telegram WebApp SDK
+      window.Telegram = window.Telegram || {};
+
       // Автоматическая версия для обновления на телефонах
       const version = new Date().getTime();
       document.write(`<link rel="stylesheet" href="style.css?v=${version}">`);
+      document.write(
+        `<script src="https://telegram.org/js/telegram-web-app.js?1"><\/script>`,
+      );
       document.write(`<script src="script.js?v=${version}"><\/script>`);
     </script>
   </head>

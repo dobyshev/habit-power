@@ -110,6 +110,7 @@ async def get_habits(telegram_id: int, db: Session = Depends(get_db)):
                 "name": habit.name,
                 "streak": habit.streak,
                 "completed_today": completed_today,
+                "emoji": habit.emoji,
             }
         )
 

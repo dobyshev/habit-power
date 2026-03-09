@@ -805,7 +805,7 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({
             telegram_id: telegramId,
             name: name,
-            emoji: selectedEmoji, // Добавляем выбранное эмодзи
+            emoji: selectedEmoji,
           }),
         });
 
@@ -824,10 +824,15 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("✅ Привычка успешно добавлена:", data);
         input.value = "";
 
+        // ВАЖНО: Если сервер вернул emoji, используем его
+        if (data.emoji) {
+          console.log(`Сервер сохранил эмодзи: ${data.emoji}`);
+        }
+
         // Сбрасываем эмодзи на дефолтный после добавления
         resetEmojiToDefault();
 
-        // Принудительно перезагружаем привычки с сервера
+        // Перезагружаем привычки с сервера
         await loadHabits();
         await loadStatistics();
         await updateTodayProgress();

@@ -850,3 +850,45 @@ body {
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
 }
+
+/* Исправления для мобильных устройств */
+@media (hover: none) and (pointer: coarse) {
+  /* Мобильные устройства */
+  .habit-emoji {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  .habit-emoji.completed {
+    background-color: #2ecc71 !important; /* Используем !important для приоритета */
+    border-color: #2ecc71 !important;
+  }
+
+  .habit-emoji:not(.completed) {
+    background-color: #1a1a1a !important;
+  }
+}
+
+/* Усиливаем специфичность селекторов */
+.habit-emoji.completed {
+  background-color: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.habit-emoji {
+  background-color: #1a1a1a;
+  border: 1px solid #2a2a2a;
+}
+
+/* Убираем возможные конфликтующие стили */
+.habit-emoji:hover:not(.completed) {
+  background-color: #2ecc71; /* Оставляем как есть */
+}
+
+/* Гарантируем правильное отображение на мобильных */
+.habit-emoji.completed,
+.habit-emoji.completed:active,
+.habit-emoji.completed:focus {
+  background-color: #2ecc71 !important;
+  border-color: #2ecc71 !important;
+}

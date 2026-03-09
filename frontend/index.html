@@ -18,7 +18,7 @@
         <button class="leaderboard-btn" id="leaderboardBtn">🏆 Рейтинг</button>
       </div>
 
-      <!-- ===== НОВЫЙ БЛОК ПРОГРЕСС СЕГОДНЯ ===== -->
+      <!-- БЛОК ПРОГРЕСС СЕГОДНЯ -->
       <div class="progress-wrapper">
         <div class="progress-card">
           <div class="progress-header">
@@ -46,9 +46,8 @@
           </div>
         </div>
       </div>
-      <!-- ===== КОНЕЦ БЛОКА ПРОГРЕСС СЕГОДНЯ ===== -->
 
-      <!-- ===== РАСКРЫВАЮЩИЙСЯ БЛОК СТАТИСТИКИ ===== -->
+      <!-- РАСКРЫВАЮЩИЙСЯ БЛОК СТАТИСТИКИ -->
       <div class="stats-wrapper">
         <div class="stats-header" id="statsToggle">
           <span class="stats-title">
@@ -61,7 +60,6 @@
         <div class="stats-collapsible" id="statsContent">
           <div class="stats-card">
             <div class="stats-grid">
-              <!-- 1️⃣ Очки пользователя -->
               <div class="stat-item">
                 <div class="stat-label">
                   <span class="stat-icon">⭐</span>
@@ -69,7 +67,6 @@
                 </div>
                 <div class="stat-value" id="stat-points">0</div>
               </div>
-              <!-- 2️⃣ Лучший streak -->
               <div class="stat-item">
                 <div class="stat-label">
                   <span class="stat-icon">🔥</span>
@@ -77,7 +74,6 @@
                 </div>
                 <div class="stat-value" id="stat-best-streak">0</div>
               </div>
-              <!-- 3️⃣ Всего выполнений -->
               <div class="stat-item">
                 <div class="stat-label">
                   <span class="stat-icon">📅</span>
@@ -85,7 +81,6 @@
                 </div>
                 <div class="stat-value" id="stat-total-completions">0</div>
               </div>
-              <!-- 4️⃣ Количество привычек -->
               <div class="stat-item">
                 <div class="stat-label">
                   <span class="stat-icon">📋</span>
@@ -97,9 +92,8 @@
           </div>
         </div>
       </div>
-      <!-- ===== КОНЕЦ БЛОКА СТАТИСТИКИ ===== -->
 
-      <!-- ===== РАСКРЫВАЮЩИЙСЯ БЛОК "МОИ ПРИВЫЧКИ" ===== -->
+      <!-- РАСКРЫВАЮЩИЙСЯ БЛОК "МОИ ПРИВЫЧКИ" -->
       <div class="habits-wrapper">
         <div class="habits-header" id="habitsToggle">
           <span class="habits-title">
@@ -114,9 +108,7 @@
 
         <div class="habits-collapsible" id="habitsContent">
           <div class="habits-section">
-            <!-- Контейнер для карточек привычек -->
             <div class="habits-container" id="habitsContainer">
-              <!-- Карточки будут загружаться сюда -->
               <div class="empty-state" id="emptyState">
                 <p>✨ Добавьте свою первую привычку</p>
               </div>
@@ -124,8 +116,10 @@
           </div>
         </div>
       </div>
-      <!-- ===== КОНЕЦ БЛОКА "МОИ ПРИВЫЧКИ" ===== -->
+
+      <!-- ОБНОВЛЕННАЯ ФОРМА ДОБАВЛЕНИЯ С ЭМОДЗИ -->
       <div class="add-habit-form">
+        <button class="emoji-selector-btn" id="emojiSelectorBtn">😀</button>
         <input
           type="text"
           id="habitName"
@@ -141,15 +135,25 @@
       </div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО РЕЙТИНГА -->
     <div class="modal" id="leaderboardModal">
       <div class="modal-content">
         <div class="modal-header">
           <h2>🏆 Рейтинг</h2>
           <button class="close-btn" id="closeModalBtn">&times;</button>
         </div>
-        <div class="leaderboard-list" id="leaderboardList">
-          <!-- Список рейтинга будет здесь -->
+        <div class="leaderboard-list" id="leaderboardList"></div>
+      </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ВЫБОРА ЭМОДЗИ -->
+    <div class="modal" id="emojiPickerModal">
+      <div class="modal-content emoji-picker-content">
+        <div class="modal-header">
+          <h2>Выберите эмодзи</h2>
+          <button class="close-btn" id="closeEmojiPickerBtn">&times;</button>
         </div>
+        <div class="emoji-grid" id="emojiGrid"></div>
       </div>
     </div>
 

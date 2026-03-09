@@ -31,6 +31,34 @@ if (!telegramId) {
 // API базовый URL
 const API_BASE = "";
 
+// Список популярных эмодзи для выбора
+const POPULAR_EMOJIS = [
+  "🏃", // бег
+  "📚", // чтение
+  "💧", // вода
+  "💻", // программирование
+  "💪", // спорт
+  "🧠", // ум
+  "🛌", // сон
+  "🍎", // здоровое питание
+  "🧘", // медитация
+  "🚶", // прогулка
+  "⭐", // общее
+  "🔥", // мотивация
+  "🎯", // цель
+  "📝", // заметки
+  "🎨", // творчество
+  "🎵", // музыка
+  "📖", // учеба
+  "🧹", // уборка
+  "💰", // финансы
+  "🌱", // развитие
+];
+
+// Константы для эмодзи
+const DEFAULT_EMOJI = "😀";
+let selectedEmoji = DEFAULT_EMOJI;
+
 // Функция для показа ошибок
 function showError(message) {
   // Удаляем предыдущие ошибки
@@ -52,8 +80,8 @@ function showError(message) {
   }, 3000);
 }
 
-// Функция для получения эмодзи по названию привычки
-function getHabitEmoji(name) {
+// Функция для получения эмодзи по названию привычки (только как запасной вариант)
+function getFallbackEmoji(name) {
   const nameLower = name.toLowerCase();
   const emojiMap = {
     run: "🏃",
@@ -86,6 +114,7 @@ function getHabitEmoji(name) {
   return "⭐";
 }
 
+// Обновление счетчика привычек
 function updateHabitsCounter(count) {
   const counter = document.getElementById("habitsCounter");
   if (counter) {
@@ -94,10 +123,87 @@ function updateHabitsCounter(count) {
   }
 }
 
+// Получение правильного склонения слова "привычка"
 function getHabitWord(count) {
   if (count === 1) return "привычка";
   if (count >= 2 && count <= 4) return "привычки";
   return "привычек";
+}
+
+// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ЭМОДЗИ =====
+
+// Открытие модального окна выбора эмодзи
+function openEmojiPicker() {
+  const modal = document.getElementById("emojiPickerModal");
+  if (modal) {
+    modal.classList.add("show");
+    highlightSelectedEmoji();
+  }
+}
+
+// Закрытие модального окна выбора эмодзи
+function closeEmojiPicker() {
+  const modal = document.getElementById("emojiPickerModal");
+  if (modal) {
+    modal.classList.remove("show");
+  }
+}
+
+// Подсветка выбранного эмодзи в сетке
+function highlightSelectedEmoji() {
+  const emojiItems = document.querySelectorAll(".emoji-item");
+  emojiItems.forEach((item) => {
+    if (item.textContent === selectedEmoji) {
+      item.classList.add("selected");
+    } else {
+      item.classList.remove("selected");
+    }
+  });
+}
+
+// Создание сетки эмодзи
+function createEmojiGrid() {
+  const grid = document.getElementById("emojiGrid");
+  if (!grid) return;
+
+  grid.innerHTML = "";
+  POPULAR_EMOJIS.forEach((emoji) => {
+    const emojiItem = document.createElement("div");
+    emojiItem.className = "emoji-item";
+    if (emoji === selectedEmoji) {
+      emojiItem.classList.add("selected");
+    }
+    emojiItem.textContent = emoji;
+    emojiItem.addEventListener("click", () => {
+      selectEmoji(emoji);
+    });
+    grid.appendChild(emojiItem);
+  });
+}
+
+// Выбор эмодзи
+function selectEmoji(emoji) {
+  selectedEmoji = emoji;
+  const emojiBtn = document.getElementById("emojiSelectorBtn");
+  if (emojiBtn) {
+    emojiBtn.textContent = emoji;
+    if (emoji !== DEFAULT_EMOJI) {
+      emojiBtn.classList.add("selected");
+    } else {
+      emojiBtn.classList.remove("selected");
+    }
+  }
+  closeEmojiPicker();
+}
+
+// Сброс эмодзи на дефолтный
+function resetEmojiToDefault() {
+  selectedEmoji = DEFAULT_EMOJI;
+  const emojiBtn = document.getElementById("emojiSelectorBtn");
+  if (emojiBtn) {
+    emojiBtn.textContent = DEFAULT_EMOJI;
+    emojiBtn.classList.remove("selected");
+  }
 }
 
 // ===== ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ ПРОГРЕССА СЕГОДНЯ =====
@@ -164,18 +270,45 @@ async function updateTodayProgress() {
   }
 }
 
-// Создание карточки привычки
+// ===== СОЗДАНИЕ КАРТОЧКИ ПРИВЫЧКИ =====
 function createHabitCard(habit) {
   const card = document.createElement("div");
   card.className = "habit-card";
   card.dataset.habitId = habit.id;
 
-  const emoji = getHabitEmoji(habit.name);
+  // ВАЖНО: Подробное логирование для отладки
+  console.log(
+    `Создание карточки для привычки ID: ${habit.id}, Name: ${habit.name}`,
+  );
+  console.log(
+    `Данные с сервера - emoji: "${habit.emoji}", тип: ${typeof habit.emoji}`,
+  );
+
+  // Определяем эмодзи для отображения
+  let emojiToShow = "⭐"; // Запасной вариант по умолчанию
+
+  // Проверяем наличие эмодзи в ответе сервера
+  if (
+    habit.emoji &&
+    habit.emoji !== "null" &&
+    habit.emoji !== "undefined" &&
+    habit.emoji !== ""
+  ) {
+    emojiToShow = habit.emoji;
+    console.log(`✅ Используем эмодзи из ответа сервера: ${emojiToShow}`);
+  } else {
+    // Если сервер не вернул эмодзи, используем запасной вариант
+    emojiToShow = getFallbackEmoji(habit.name);
+    console.log(
+      `⚠️ Эмодзи не найдено в ответе, используем запасной: ${emojiToShow}`,
+    );
+  }
+
   const isCompleted = habit.completed_today || false;
 
   card.innerHTML = `
     <div class="habit-emoji ${isCompleted ? "completed" : ""}" id="habitEmoji-${habit.id}">
-        ${isCompleted ? "✅" : emoji}
+        ${isCompleted ? "✅" : emojiToShow}
     </div>
     <div class="habit-info">
         <div class="habit-name ${isCompleted ? "completed-text" : ""}">${habit.name}</div>
@@ -188,6 +321,9 @@ function createHabitCard(habit) {
         <button class="delete-btn">🗑</button>
     </div>
   `;
+
+  // Сохраняем эмодзи в data-атрибут карточки для использования в обработчиках
+  card.dataset.habitEmoji = emojiToShow;
 
   // Обработчик выполнения/отмены на эмодзи
   const emojiDiv = card.querySelector(".habit-emoji");
@@ -256,7 +392,7 @@ function createHabitCard(habit) {
       if (isCurrentlyCompleted) {
         // Отмена выполнения
         emojiDiv.classList.remove("completed");
-        emojiDiv.textContent = emoji;
+        emojiDiv.textContent = emojiToShow;
         nameDiv.classList.remove("completed-text");
 
         // Для мобильных устройств: принудительно обновляем фон
@@ -353,7 +489,7 @@ function createHabitCard(habit) {
   return card;
 }
 
-// Загрузка привычек
+// ===== ЗАГРУЗКА ПРИВЫЧЕК =====
 async function loadHabits() {
   if (!telegramId) {
     console.error("loadHabits: telegramId отсутствует");
@@ -371,6 +507,17 @@ async function loadHabits() {
 
     const habits = await response.json();
     console.log("📋 Загружены привычки:", habits);
+
+    // ПОДРОБНОЕ ЛОГИРОВАНИЕ: выводим все поля каждой привычки
+    habits.forEach((habit, index) => {
+      console.log(`=== Привычка ${index + 1} ===`);
+      console.log(`ID: ${habit.id}`);
+      console.log(`Name: "${habit.name}"`);
+      console.log(`Emoji: "${habit.emoji || "НЕ УКАЗАН"}"`);
+      console.log(`Streak: ${habit.streak}`);
+      console.log(`Completed today: ${habit.completed_today}`);
+      console.log(`Все поля:`, habit);
+    });
 
     const container = document.getElementById("habitsContainer");
     const emptyState = document.getElementById("emptyState");
@@ -408,7 +555,7 @@ async function loadHabits() {
   }
 }
 
-// Загрузка очков пользователя
+// ===== ЗАГРУЗКА ОЧКОВ ПОЛЬЗОВАТЕЛЯ =====
 async function loadUserPoints() {
   try {
     const response = await fetch(`${API_BASE}/api/habits/${telegramId}`);
@@ -431,7 +578,7 @@ async function loadUserPoints() {
   }
 }
 
-// Функция для загрузки и обновления статистики
+// ===== ЗАГРУЗКА СТАТИСТИКИ =====
 async function loadStatistics() {
   if (!telegramId) return;
 
@@ -475,7 +622,7 @@ async function loadStatistics() {
   }
 }
 
-// Загрузка рейтинга
+// ===== ЗАГРУЗКА РЕЙТИНГА =====
 async function loadLeaderboard() {
   try {
     const response = await fetch(`${API_BASE}/api/leaderboard`);
@@ -500,7 +647,7 @@ async function loadLeaderboard() {
   }
 }
 
-// Инициализация приложения
+// ===== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ =====
 async function initApp() {
   if (!telegramId) {
     showError("Не удалось получить ID пользователя");
@@ -528,13 +675,18 @@ async function initApp() {
 
     await loadStatistics();
     await updateTodayProgress();
+
+    // Устанавливаем дефолтный эмодзи при загрузке
+    resetEmojiToDefault();
   } catch (error) {
     console.error("Ошибка при инициализации:", error);
     showError("Ошибка при подключении к серверу");
   }
 }
 
-// Логика для раскрывающегося блока статистики
+// ===== ЛОГИКА РАСКРЫВАЮЩИХСЯ БЛОКОВ =====
+
+// Статистика
 function initStatsToggle() {
   const statsHeader = document.getElementById("statsToggle");
   const statsContent = document.getElementById("statsContent");
@@ -564,7 +716,7 @@ function initStatsToggle() {
   });
 }
 
-// Логика для раскрывающегося блока привычек
+// Привычки
 function initHabitsToggle() {
   const habitsHeader = document.getElementById("habitsToggle");
   const habitsContent = document.getElementById("habitsContent");
@@ -594,13 +746,38 @@ function initHabitsToggle() {
   });
 }
 
-// Единый обработчик событий при загрузке DOM
+// ===== ГЛАВНЫЙ ОБРАБОТЧИК СОБЫТИЙ =====
 document.addEventListener("DOMContentLoaded", () => {
   console.log("DOM загружен, инициализация приложения...");
 
   initApp();
   initStatsToggle();
   initHabitsToggle();
+
+  // Создаем сетку эмодзи
+  createEmojiGrid();
+
+  // Обработчик для кнопки выбора эмодзи
+  const emojiSelectorBtn = document.getElementById("emojiSelectorBtn");
+  if (emojiSelectorBtn) {
+    emojiSelectorBtn.addEventListener("click", openEmojiPicker);
+  }
+
+  // Обработчик для закрытия выбора эмодзи
+  const closeEmojiPickerBtn = document.getElementById("closeEmojiPickerBtn");
+  if (closeEmojiPickerBtn) {
+    closeEmojiPickerBtn.addEventListener("click", closeEmojiPicker);
+  }
+
+  // Закрытие модального окна эмодзи по клику вне его
+  const emojiModal = document.getElementById("emojiPickerModal");
+  if (emojiModal) {
+    emojiModal.addEventListener("click", (e) => {
+      if (e.target === emojiModal) {
+        closeEmojiPicker();
+      }
+    });
+  }
 
   // Добавление привычки
   const addBtn = document.getElementById("addHabitBtn");
@@ -614,6 +791,11 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      console.log("Добавление привычки:");
+      console.log("- telegram_id:", telegramId);
+      console.log("- name:", name);
+      console.log("- emoji:", selectedEmoji);
+
       try {
         const response = await fetch(`${API_BASE}/api/add-habit`, {
           method: "POST",
@@ -623,26 +805,34 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({
             telegram_id: telegramId,
             name: name,
+            emoji: selectedEmoji, // Добавляем выбранное эмодзи
           }),
         });
 
         const data = await response.json();
+        console.log("Ответ сервера после добавления:", data);
 
         if (!response.ok) {
           if (data.detail === "Maximum habits limit (10) reached") {
             showError("Максимум 10 привычек");
+          } else {
+            showError(`Ошибка: ${data.detail || "Неизвестная ошибка"}`);
           }
           return;
         }
 
-        console.log("Привычка добавлена:", data);
+        console.log("✅ Привычка успешно добавлена:", data);
         input.value = "";
 
+        // Сбрасываем эмодзи на дефолтный после добавления
+        resetEmojiToDefault();
+
+        // Принудительно перезагружаем привычки с сервера
         await loadHabits();
         await loadStatistics();
         await updateTodayProgress();
       } catch (error) {
-        console.error("Error adding habit:", error);
+        console.error("❌ Ошибка при добавлении привычки:", error);
         showError("Ошибка при добавлении привычки");
       }
     });
@@ -657,6 +847,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Закрытие модального окна рейтинга
   const closeBtn = document.getElementById("closeModalBtn");
   if (closeBtn) {
     closeBtn.addEventListener("click", () => {
@@ -664,12 +855,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Закрытие модального окна по клику вне его
-  const modal = document.getElementById("leaderboardModal");
-  if (modal) {
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        modal.classList.remove("show");
+  // Закрытие модального окна рейтинга по клику вне его
+  const leaderboardModal = document.getElementById("leaderboardModal");
+  if (leaderboardModal) {
+    leaderboardModal.addEventListener("click", (e) => {
+      if (e.target === leaderboardModal) {
+        leaderboardModal.classList.remove("show");
       }
     });
   }

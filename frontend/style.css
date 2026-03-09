@@ -892,3 +892,189 @@ body {
   background-color: #2ecc71 !important;
   border-color: #2ecc71 !important;
 }
+
+/* ===== ОБНОВЛЕННАЯ ФОРМА ДОБАВЛЕНИЯ ===== */
+.add-habit-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  margin-top: 16px;
+  align-items: center;
+  background-color: #1a1a1a;
+  padding: 8px;
+  border-radius: 24px;
+  border: 1px solid #2a2a2a;
+  transition: all 0.2s ease;
+}
+
+.add-habit-form:focus-within {
+  border-color: #2ecc71;
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2);
+}
+
+.emoji-selector-btn {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #242424 0%, #1a1a1a 100%);
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  margin-left: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.emoji-selector-btn:hover {
+  border-color: #2ecc71;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+  background: linear-gradient(135deg, #2a2a2a 0%, #242424 100%);
+}
+
+.emoji-selector-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
+}
+
+.emoji-selector-btn.selected {
+  border-color: #2ecc71;
+  background: linear-gradient(135deg, #2a2a2a 0%, #242424 100%);
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.3);
+}
+
+.add-habit-form input {
+  flex: 1;
+  background-color: transparent;
+  border: none;
+  color: #ffffff;
+  padding: 12px 8px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  min-width: 0;
+}
+
+.add-habit-form input:focus {
+  outline: none;
+}
+
+.add-habit-form input::placeholder {
+  color: #4a4a4a;
+  font-style: italic;
+}
+
+.add-btn {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: white;
+  border: none;
+  padding: 0 20px;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+  height: 48px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.add-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(46, 204, 113, 0.4);
+}
+
+.add-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
+}
+
+/* Улучшенный дизайн модального окна с эмодзи */
+.emoji-picker-content {
+  max-width: 350px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  padding: 20px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.emoji-item {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #242424 0%, #1f1f1f 100%);
+  border: 1px solid #2a2a2a;
+  border-radius: 14px;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.emoji-item:hover {
+  border-color: #2ecc71;
+  transform: translateY(-3px) scale(1.05);
+  background: linear-gradient(135deg, #2a2a2a 0%, #252525 100%);
+  box-shadow: 0 8px 16px rgba(46, 204, 113, 0.3);
+}
+
+.emoji-item:active {
+  transform: translateY(0) scale(1);
+  box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
+}
+
+/* Индикатор выбранного эмодзи в модальном окне */
+.emoji-item.selected {
+  border-color: #2ecc71;
+  background: linear-gradient(135deg, #2a2a2a 0%, #252525 100%);
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.5);
+  transform: scale(1.05);
+}
+
+/* Адаптивность для маленьких экранов */
+@media (max-width: 400px) {
+  .add-habit-form {
+    padding: 6px;
+  }
+
+  .emoji-selector-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+    border-radius: 14px;
+  }
+
+  .add-btn {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 14px;
+    border-radius: 14px;
+  }
+
+  .emoji-item {
+    font-size: 24px;
+    border-radius: 12px;
+  }
+
+  .emoji-grid {
+    gap: 8px;
+    padding: 16px;
+  }
+}

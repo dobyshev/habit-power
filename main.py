@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from datetime import date, datetime
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 from database import engine, get_db
@@ -42,6 +42,7 @@ class UserCreate(BaseModel):
 class HabitCreate(BaseModel):
     telegram_id: int
     name: str
+    emoji: Optional[str] = "😀"  # 👈 ДОБАВЛЕНО поле emoji с дефолтным значением
 
 
 class HabitDelete(BaseModel):
@@ -63,6 +64,7 @@ class HabitResponse(BaseModel):
     name: str
     streak: int
     completed_today: bool
+    emoji: Optional[str] = None  # 👈 ДОБАВЛЕНО поле emoji в ответе
 
 
 class LeaderboardResponse(BaseModel):
@@ -126,12 +128,14 @@ async def add_habit(habit_data: HabitCreate, db: Session = Depends(get_db)):
     if habits_count >= 10:
         raise HTTPException(status_code=400, detail="Maximum habits limit (10) reached")
 
-    new_habit = Habit(user_id=user.id, name=habit_data.name, streak=0)
+    new_habit = Habit(
+        user_id=user.id, name=habit_data.name, streak=0, emoji=habit_data.emoji
+    )
     db.add(new_habit)
     db.commit()
     db.refresh(new_habit)
 
-    return {"status": "success", "habit_id": new_habit.id}
+    return {"status": "success", "habit_id": new_habit.id, "emoji": new_habit.emoji}
 
 
 @app.post("/api/delete-habit")

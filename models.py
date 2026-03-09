@@ -21,6 +21,7 @@ class Habit(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String)
     streak = Column(Integer, default=0)
+    emoji = Column(String, default="😀")  # 👈 ДОБАВЛЕНО поле для эмодзи
 
     user = relationship("User", back_populates="habits")
     completions = relationship(

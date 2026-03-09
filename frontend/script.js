@@ -211,6 +211,9 @@ function createHabitCard(habit) {
       // Обновляем статистику
       await loadStatistics();
 
+      // ===== НОВОЕ: Обновляем прогресс после выполнения/отмены =====
+      await updateTodayProgress();
+
       // Обновляем habit.completed_today для будущих кликов
       habit.completed_today = !isCurrentlyCompleted;
     } catch (error) {
@@ -264,6 +267,9 @@ function createHabitCard(habit) {
 
           // Обновляем статистику
           await loadStatistics();
+
+          // ===== НОВОЕ: Обновляем прогресс после удаления =====
+          await updateTodayProgress();
         }
       } catch (error) {
         console.error("Ошибка удаления:", error);
@@ -406,6 +412,70 @@ async function loadStatistics() {
   }
 }
 
+// ===== ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ ПРОГРЕССА СЕГОДНЯ =====
+async function updateTodayProgress() {
+  if (!telegramId) return;
+
+  try {
+    // Получаем привычки пользователя
+    const response = await fetch(`${API_BASE}/api/habits/${telegramId}`);
+    if (!response.ok) {
+      console.error("Ошибка загрузки привычек для прогресса");
+      return;
+    }
+
+    const habits = await response.json();
+
+    // Общее количество привычек
+    const totalHabits = habits.length;
+
+    // Количество выполненных сегодня привычек
+    const completedToday = habits.filter(
+      (habit) => habit.completed_today,
+    ).length;
+
+    // Элементы DOM
+    const percentEl = document.getElementById("progressPercent");
+    const textEl = document.getElementById("progressText");
+    const barFillEl = document.getElementById("progressBarFill");
+    const messageEl = document.getElementById("progressMessage");
+
+    // Проверяем, существуют ли элементы (на случай, если блок еще не добавлен)
+    if (!percentEl || !textEl || !barFillEl || !messageEl) return;
+
+    if (totalHabits === 0) {
+      // Нет привычек
+      percentEl.textContent = "0%";
+      textEl.textContent = "Нет привычек";
+      barFillEl.style.width = "0%";
+      messageEl.textContent = "👋 Добавьте привычки для начала";
+      return;
+    }
+
+    // Рассчитываем процент
+    const percent = Math.round((completedToday / totalHabits) * 100);
+
+    // Обновляем UI
+    percentEl.textContent = `${percent}%`;
+    textEl.textContent = `${completedToday} из ${totalHabits} привычек выполнено`;
+    barFillEl.style.width = `${percent}%`;
+
+    // Мотивационное сообщение
+    if (percent === 100) {
+      messageEl.textContent = "🎉 Отличная работа! Все привычки выполнены!";
+    } else if (completedToday === 0) {
+      messageEl.textContent = "💪 Начни день с выполнения привычек!";
+    } else if (percent >= 50) {
+      messageEl.textContent = "🔥 Так держать! Осталось совсем немного!";
+    } else {
+      messageEl.textContent =
+        "💪 Продолжай! Каждая привычка приближает к цели!";
+    }
+  } catch (error) {
+    console.error("Ошибка при обновлении прогресса:", error);
+  }
+}
+
 // Загрузка рейтинга
 async function loadLeaderboard() {
   try {
@@ -463,6 +533,9 @@ async function initApp() {
 
     // Загружаем статистику
     await loadStatistics();
+
+    // ===== НОВОЕ: Обновляем прогресс сегодня =====
+    await updateTodayProgress();
   } catch (error) {
     console.error("Ошибка при инициализации:", error);
     showError("Ошибка при подключении к серверу");
@@ -587,6 +660,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Принудительно загружаем привычки заново
         await loadHabits();
         await loadStatistics();
+
+        // ===== НОВОЕ: Обновляем прогресс после добавления =====
+        await updateTodayProgress();
       } catch (error) {
         console.error("Error adding habit:", error);
         showError("Ошибка при добавлении привычки");

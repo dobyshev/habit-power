@@ -5,9 +5,11 @@ from sqlalchemy.orm import Session
 from datetime import date, datetime
 from typing import List, Optional
 from pydantic import BaseModel
+from datetime import date, datetime, timedelta
+import re
 
 from database import engine, get_db
-from models import Base, User, Habit, Completion
+from models import Base, User, Habit, Completion, UserProfile, UsernameHistory
 
 # Создание таблиц
 Base.metadata.create_all(bind=engine)
@@ -42,7 +44,7 @@ class UserCreate(BaseModel):
 class HabitCreate(BaseModel):
     telegram_id: int
     name: str
-    emoji: Optional[str] = "😀"  # 👈 ДОБАВЛЕНО поле emoji с дефолтным значением
+    emoji: Optional[str] = "😀"
 
 
 class HabitDelete(BaseModel):
@@ -64,12 +66,42 @@ class HabitResponse(BaseModel):
     name: str
     streak: int
     completed_today: bool
-    emoji: Optional[str] = None  # 👈 ДОБАВЛЕНО поле emoji в ответе
+    emoji: Optional[str] = None
 
 
 class LeaderboardResponse(BaseModel):
     telegram_id: int
     points: int
+    username: Optional[str] = None
+    emoji: Optional[str] = None
+
+
+# 👇 НОВЫЕ PYDANTIC МОДЕЛИ ДЛЯ ПРОФИЛЯ
+class UsernameCheckRequest(BaseModel):
+    telegram_id: int
+    username: str
+
+
+class UsernameCheckResponse(BaseModel):
+    available: bool
+    reason: Optional[str] = None
+
+
+class UserProfileRequest(BaseModel):
+    telegram_id: int
+
+
+class UserProfileResponse(BaseModel):
+    telegram_id: int
+    username: Optional[str] = None
+    emoji: Optional[str] = "😀"
+    created_at: Optional[str] = None
+
+
+class UpdateProfileRequest(BaseModel):
+    telegram_id: int
+    username: str
+    emoji: str
 
 
 # API Endpoints
@@ -82,7 +114,140 @@ async def create_or_get_user(user_data: UserCreate, db: Session = Depends(get_db
         db.add(user)
         db.commit()
         db.refresh(user)
+
+        # Создаем профиль для нового пользователя
+        profile = UserProfile(
+            user_id=user.id, telegram_id=user.telegram_id, username=None, emoji="😀"
+        )
+        db.add(profile)
+        db.commit()
+
     return {"status": "success", "user_id": user.id, "points": user.points}
+
+
+# 👇 НОВЫЙ ЭНДПОИНТ: Проверка уникальности имени
+@app.post("/api/check-username", response_model=UsernameCheckResponse)
+async def check_username(request: UsernameCheckRequest, db: Session = Depends(get_db)):
+    """Проверяет, доступно ли имя пользователя"""
+
+    # Валидация длины
+    if len(request.username) < 3:
+        return {"available": False, "reason": "too_short"}
+
+    if len(request.username) > 20:
+        return {"available": False, "reason": "too_long"}
+
+    # Валидация символов (только латинские буквы, цифры и _)
+    if not re.match("^[a-zA-Z0-9_]+$", request.username):
+        return {"available": False, "reason": "invalid_chars"}
+
+    # Проверяем, не занято ли имя другим пользователем
+    existing_profile = (
+        db.query(UserProfile)
+        .filter(
+            UserProfile.username == request.username,
+            UserProfile.telegram_id != request.telegram_id,
+        )
+        .first()
+    )
+
+    if existing_profile:
+        return {"available": False, "reason": "taken"}
+
+    return {"available": True, "reason": None}
+
+
+# 👇 НОВЫЙ ЭНДПОИНТ: Получение профиля пользователя
+@app.post("/api/user-profile", response_model=UserProfileResponse)
+async def get_user_profile(request: UserProfileRequest, db: Session = Depends(get_db)):
+    """Возвращает профиль пользователя"""
+
+    profile = (
+        db.query(UserProfile)
+        .filter(UserProfile.telegram_id == request.telegram_id)
+        .first()
+    )
+
+    if not profile:
+        # Если профиля нет, создаем его
+        user = db.query(User).filter(User.telegram_id == request.telegram_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        profile = UserProfile(
+            user_id=user.id, telegram_id=user.telegram_id, username=None, emoji="😀"
+        )
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+
+    return {
+        "telegram_id": profile.telegram_id,
+        "username": profile.username,
+        "emoji": profile.emoji,
+        "created_at": profile.created_at.isoformat() if profile.created_at else None,
+    }
+
+
+# 👇 НОВЫЙ ЭНДПОИНТ: Обновление профиля
+@app.post("/api/update-profile")
+async def update_profile(request: UpdateProfileRequest, db: Session = Depends(get_db)):
+    """Обновляет профиль пользователя (имя и эмодзи)"""
+
+    # Проверяем пользователя
+    user = db.query(User).filter(User.telegram_id == request.telegram_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Валидация имени
+    if len(request.username) < 3:
+        raise HTTPException(status_code=400, detail="username_too_short")
+
+    if len(request.username) > 20:
+        raise HTTPException(status_code=400, detail="username_too_long")
+
+    if not re.match("^[a-zA-Z0-9_]+$", request.username):
+        raise HTTPException(status_code=400, detail="username_invalid_chars")
+
+    # Проверяем уникальность имени
+    existing_profile = (
+        db.query(UserProfile)
+        .filter(
+            UserProfile.username == request.username,
+            UserProfile.telegram_id != request.telegram_id,
+        )
+        .first()
+    )
+
+    if existing_profile:
+        raise HTTPException(status_code=400, detail="username_taken")
+
+    # Получаем или создаем профиль
+    profile = (
+        db.query(UserProfile)
+        .filter(UserProfile.telegram_id == request.telegram_id)
+        .first()
+    )
+
+    if not profile:
+        profile = UserProfile(user_id=user.id, telegram_id=user.telegram_id)
+        db.add(profile)
+
+    # Сохраняем старое имя в историю, если оно меняется
+    if profile.username and profile.username != request.username:
+        history = UsernameHistory(
+            user_id=user.id, telegram_id=user.telegram_id, username=profile.username
+        )
+        db.add(history)
+
+    # Обновляем профиль
+    profile.username = request.username
+    profile.emoji = request.emoji
+    profile.updated_at = datetime.utcnow()
+
+    db.commit()
+
+    return {"status": "success", "username": profile.username, "emoji": profile.emoji}
 
 
 @app.get("/api/habits/{telegram_id}", response_model=List[HabitResponse])
@@ -235,11 +400,80 @@ async def undo_habit(habit_data: HabitUndo, db: Session = Depends(get_db)):
     }
 
 
+# ===== НОВЫЙ ЭНДПОИНТ ДЛЯ АКТИВНОСТИ =====
+
+
+class ActivityRequest(BaseModel):
+    telegram_id: int
+    days: Optional[int] = 30
+
+
+@app.post("/api/habit-activity")
+async def get_habit_activity(request: ActivityRequest, db: Session = Depends(get_db)):
+    """Возвращает активность пользователя за последние N дней"""
+
+    user = db.query(User).filter(User.telegram_id == request.telegram_id).first()
+    if not user:
+        return {"activity": []}
+
+    # Получаем все привычки пользователя
+    habits = db.query(Habit).filter(Habit.user_id == user.id).all()
+    habit_ids = [habit.id for habit in habits]
+
+    if not habit_ids:
+        return {"activity": [0] * request.days}
+
+    # Вычисляем дату начала периода
+    end_date = date.today()
+    start_date = end_date - timedelta(days=request.days - 1)
+
+    # Получаем все выполнения за период
+    completions = (
+        db.query(Completion)
+        .filter(
+            Completion.habit_id.in_(habit_ids),
+            Completion.date >= start_date,
+            Completion.date <= end_date,
+        )
+        .all()
+    )
+
+    # Группируем по дням
+    activity_by_date = {}
+    for completion in completions:
+        date_str = completion.date.isoformat()
+        if date_str not in activity_by_date:
+            activity_by_date[date_str] = 0
+        activity_by_date[date_str] += 1
+
+    # Формируем массив за каждый день
+    activity = []
+    for i in range(request.days):
+        current_date = start_date + timedelta(days=i)
+        date_str = current_date.isoformat()
+        activity.append(activity_by_date.get(date_str, 0))
+
+    return {"activity": activity}
+
+
 @app.get("/api/leaderboard", response_model=List[LeaderboardResponse])
 async def get_leaderboard(db: Session = Depends(get_db)):
     """Возвращает рейтинг пользователей"""
     users = db.query(User).order_by(User.points.desc()).limit(50).all()
-    return [{"telegram_id": user.telegram_id, "points": user.points} for user in users]
+
+    result = []
+    for user in users:
+        profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+        result.append(
+            {
+                "telegram_id": user.telegram_id,
+                "points": user.points,
+                "username": profile.username if profile else None,
+                "emoji": profile.emoji if profile else "😀",
+            }
+        )
+
+    return result
 
 
 if __name__ == "__main__":

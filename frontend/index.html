@@ -19,13 +19,13 @@
   </head>
   <body>
     <div class="app">
-      <div class="header">
-        <h1>Habit Power</h1>
-        <button class="leaderboard-btn" id="leaderboardBtn">🏆 Рейтинг</button>
+      <!-- ВЕРХНИЙ ЗАГОЛОВОК -->
+      <div class="main-header">
+        <h1 id="mainHeaderTitle">Habit Power</h1>
       </div>
 
       <!-- БЛОК ПРОГРЕСС СЕГОДНЯ -->
-      <div class="progress-wrapper">
+      <div class="progress-wrapper compact" id="progressBlock">
         <div class="progress-card">
           <div class="progress-header">
             <span class="progress-title">
@@ -53,102 +53,27 @@
         </div>
       </div>
 
-      <!-- РАСКРЫВАЮЩИЙСЯ БЛОК СТАТИСТИКИ -->
-      <div class="stats-wrapper">
-        <div class="stats-header" id="statsToggle">
-          <span class="stats-title">
-            <span class="stats-icon">📊</span>
-            Статистика
-          </span>
-          <span class="stats-arrow" id="statsArrow">▼</span>
-        </div>
-
-        <div class="stats-collapsible" id="statsContent">
-          <div class="stats-card">
-            <div class="stats-grid">
-              <div class="stat-item">
-                <div class="stat-label">
-                  <span class="stat-icon">⭐</span>
-                  <span>Очки</span>
-                </div>
-                <div class="stat-value" id="stat-points">0</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">
-                  <span class="stat-icon">🔥</span>
-                  <span>Лучший streak</span>
-                </div>
-                <div class="stat-value" id="stat-best-streak">0</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">
-                  <span class="stat-icon">📅</span>
-                  <span>Выполнено</span>
-                </div>
-                <div class="stat-value" id="stat-total-completions">0</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-label">
-                  <span class="stat-icon">📋</span>
-                  <span>Привычек</span>
-                </div>
-                <div class="stat-value" id="stat-habits-count">0</div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- НАВИГАЦИЯ -->
+      <div class="nav-bar" id="navBar">
+        <button class="nav-back" id="navBackBtn" style="display: none">
+          ← Назад
+        </button>
+        <h2 class="nav-title" id="navTitle">Главное меню</h2>
       </div>
 
-      <!-- РАСКРЫВАЮЩИЙСЯ БЛОК "МОИ ПРИВЫЧКИ" -->
-      <div class="habits-wrapper">
-        <div class="habits-header" id="habitsToggle">
-          <span class="habits-title">
-            <span class="habits-title-icon">📋</span>
-            Мои привычки
-          </span>
-          <div style="display: flex; align-items: center; gap: 12px">
-            <span class="habits-counter" id="habitsCounter">0 привычек</span>
-            <span class="habits-arrow" id="habitsArrow">▼</span>
-          </div>
+      <!-- ЭКРАНЫ (ОСНОВНОЙ КОНТЕНТ) -->
+      <div id="screenContainer" class="screen-container"></div>
+
+      <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+      <div class="tab-bar">
+        <div class="tab-item" id="tabHome" data-tab="home">
+          <span class="tab-icon">🏠</span>
+          <span class="tab-label">Главная</span>
         </div>
-
-        <div class="habits-collapsible" id="habitsContent">
-          <div class="habits-section">
-            <div class="habits-container" id="habitsContainer">
-              <div class="empty-state" id="emptyState">
-                <p>✨ Добавьте свою первую привычку</p>
-              </div>
-            </div>
-          </div>
+        <div class="tab-item" id="tabProfile" data-tab="profile">
+          <span class="tab-icon">👤</span>
+          <span class="tab-label">Профиль</span>
         </div>
-      </div>
-
-      <!-- ОБНОВЛЕННАЯ ФОРМА ДОБАВЛЕНИЯ С ЭМОДЗИ -->
-      <div class="add-habit-form">
-        <button class="emoji-selector-btn" id="emojiSelectorBtn">😀</button>
-        <input
-          type="text"
-          id="habitName"
-          placeholder="Новая привычка..."
-          maxlength="50"
-        />
-        <button class="add-btn" id="addHabitBtn">+ Добавить</button>
-      </div>
-
-      <div class="points-display">
-        <span>Очки:</span>
-        <span id="points">0</span>
-      </div>
-    </div>
-
-    <!-- МОДАЛЬНОЕ ОКНО РЕЙТИНГА -->
-    <div class="modal" id="leaderboardModal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>🏆 Рейтинг</h2>
-          <button class="close-btn" id="closeModalBtn">&times;</button>
-        </div>
-        <div class="leaderboard-list" id="leaderboardList"></div>
       </div>
     </div>
 

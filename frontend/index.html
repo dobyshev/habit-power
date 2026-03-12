@@ -19,8 +19,8 @@
   </head>
   <body>
     <div class="app">
-      <!-- ВЕРХНИЙ ЗАГОЛОВОК -->
-      <div class="main-header">
+      <!-- ВЕРХНИЙ ЗАГОЛОВОК (виден только на главной) -->
+      <div class="main-header" id="mainHeader">
         <h1 id="mainHeaderTitle">Habit Power</h1>
       </div>
 
@@ -55,7 +55,11 @@
 
       <!-- НАВИГАЦИЯ (всегда видна) -->
       <div class="nav-bar" id="navBar">
-        <button class="nav-back" id="navBackBtn" style="display: none">
+        <button
+          class="nav-back glass-button"
+          id="navBackBtn"
+          style="display: none"
+        >
           ← Назад
         </button>
         <h2 class="nav-title" id="navTitle">Главное меню</h2>
@@ -65,7 +69,7 @@
       <div id="screenContainer" class="screen-container"></div>
 
       <!-- НИЖНЯЯ НАВИГАЦИЯ (овальная) -->
-      <div class="bottom-nav">
+      <div class="bottom-nav glass-card">
         <div class="bottom-nav-item" id="tabHome" data-tab="home">
           <span class="bottom-nav-icon">🏠</span>
           <span class="bottom-nav-label">Главная</span>
@@ -79,10 +83,12 @@
 
     <!-- МОДАЛЬНОЕ ОКНО ВЫБОРА ЭМОДЗИ -->
     <div class="modal" id="emojiPickerModal">
-      <div class="modal-content emoji-picker-content">
+      <div class="modal-content glass-card">
         <div class="modal-header">
           <h2>Выберите эмодзи</h2>
-          <button class="close-btn" id="closeEmojiPickerBtn">&times;</button>
+          <button class="close-btn glass-button" id="closeEmojiPickerBtn">
+            &times;
+          </button>
         </div>
         <div class="emoji-grid" id="emojiGrid"></div>
       </div>

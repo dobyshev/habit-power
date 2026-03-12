@@ -866,7 +866,7 @@ function renderMainScreen(container) {
   updateQuickStats(true); // force = true при первой загрузке
 }
 
-// ===== ПОЛНОСТЬЮ ОБНОВЛЕННАЯ ФУНКЦИЯ СТАТИСТИКИ =====
+// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ СТАТИСТИКИ (БЕЗ БОЛЬШОГО БЛОКА ОЧКОВ) =====
 
 async function renderStatsScreen(container) {
   try {
@@ -943,16 +943,14 @@ async function renderStatsScreen(container) {
         return bars;
       }
 
-      // Нормализуем значения для отображения (максимальная высота полоски 24px)
       const max = Math.max(...data, 1);
-
       return data
         .map((value) => {
           const height = Math.max(
             4,
             Math.min(24, Math.round((value / max) * 24)),
           );
-          return `<div class="activity-bar" style="height: ${height}px; background-color: var(--accent-green);" title="Выполнено: ${value}"></div>`;
+          return `<div class="activity-bar" style="height: ${height}px;" title="Выполнено: ${value}"></div>`;
         })
         .join("");
     }
@@ -961,12 +959,6 @@ async function renderStatsScreen(container) {
       <div class="screen stats-screen">
         <!-- Заголовок -->
         <h2 class="stats-main-title">Статистика</h2>
-        
-        <!-- Верхний блок с очками -->
-        <div class="stats-points-block">
-          <div class="stats-points-large">${userData.points || 0}</div>
-          <div class="stats-points-label-large">очков</div>
-        </div>
 
         <!-- Блок мини-статистики (6 карточек в 2 ряда) -->
         <div class="stats-mini-cards">
@@ -1230,17 +1222,21 @@ function showScreen(screenName) {
   const navTitle = document.getElementById("navTitle");
   const progressBlock = document.getElementById("progressBlock");
   const navBar = document.getElementById("navBar");
+  const mainHeader = document.getElementById("mainHeader");
 
   // Навигационная панель всегда видна
   navBar.style.display = "flex";
 
   if (screenName === "main") {
-    // На главном экране скрываем кнопку назад
+    // На главном экране показываем заголовок и прогресс, скрываем кнопку назад
+    mainHeader.style.display = "block";
+    progressBlock.style.display = "block";
     navBack.style.display = "none";
     navTitle.textContent = "Главное меню";
-    progressBlock.style.display = "block";
   } else {
-    // В разделах показываем кнопку назад
+    // В разделах скрываем заголовок и прогресс, показываем кнопку назад
+    mainHeader.style.display = "none";
+    progressBlock.style.display = "none";
     navBack.style.display = "block";
 
     const titles = {
@@ -1250,7 +1246,6 @@ function showScreen(screenName) {
       leaderboard: "Рейтинг",
     };
     navTitle.textContent = titles[screenName] || "Habit Power";
-    progressBlock.style.display = "none";
   }
 
   // Плавное исчезновение контента
@@ -1289,7 +1284,6 @@ function showScreen(screenName) {
     }, 50);
   }, 150);
 }
-
 window.showScreen = showScreen;
 
 // ===== УПРАВЛЕНИЕ ВКЛАДКАМИ =====

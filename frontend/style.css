@@ -1715,3 +1715,30 @@ body {
     gap: 4px;
   }
 }
+
+/* Убедимся, что кнопка назад всегда видна, когда нужно */
+.nav-back {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+  display: inline-block; /* Убедимся, что display работает */
+}
+
+.nav-back:hover {
+  background-color: var(--hover-color);
+}
+
+.nav-back[style*="display: none"] {
+  display: none !important;
+}
+
+.nav-back[style*="display: block"] {
+  display: block !important;
+}

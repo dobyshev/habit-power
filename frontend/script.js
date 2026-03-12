@@ -68,6 +68,10 @@ let isNameChecking = false;
 let isNameAvailable = false;
 let nameCheckTimeout = null;
 
+// Для оптимизации обновления статистики
+let lastStatsUpdate = 0;
+const STATS_UPDATE_INTERVAL = 60000; // 1 минута
+
 window.telegramId = telegramId;
 window.API_BASE = API_BASE;
 window.selectedEmoji = selectedEmoji;
@@ -504,7 +508,7 @@ function renderProfileScreen(container) {
   checkForChanges();
 }
 
-// ===== ФУНКЦИИ ДЛЯ БЫСТРОЙ СТАТИСТИКИ =====
+// ===== ФУНКЦИИ ДЛЯ БЫСТРОЙ СТАТИСТИКИ (С КЭШИРОВАНИЕМ) =====
 
 function showQuickStatsSkeleton() {
   const statsGrid = document.getElementById("quickStatsGrid");
@@ -537,8 +541,15 @@ function formatNumber(num) {
 
 window.formatNumber = formatNumber;
 
-async function updateQuickStats() {
+async function updateQuickStats(force = false) {
   if (!telegramId) return;
+
+  // Проверяем, нужно ли обновлять статистику
+  const now = Date.now();
+  if (!force && now - lastStatsUpdate < STATS_UPDATE_INTERVAL) {
+    console.log("Статистика не требует обновления");
+    return;
+  }
 
   try {
     showQuickStatsSkeleton();
@@ -568,6 +579,9 @@ async function updateQuickStats() {
     }, 0);
 
     renderQuickStats(points, totalCompletions, maxStreak);
+
+    // Обновляем время последнего обновления
+    lastStatsUpdate = now;
   } catch (error) {
     console.error("Ошибка при обновлении быстрой статистики:", error);
     renderQuickStats(0, 0, 0);
@@ -663,7 +677,7 @@ async function updateTodayProgress() {
 
 window.updateTodayProgress = updateTodayProgress;
 
-// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ПРИВЫЧКАМИ =====
+// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ПРИВЫЧКАМИ (С ПРИНУДИТЕЛЬНЫМ ОБНОВЛЕНИЕМ) =====
 
 async function toggleHabitCompletion(habitId) {
   const emojiDiv = document.getElementById(`habitEmoji-${habitId}`);
@@ -708,8 +722,9 @@ async function toggleHabitCompletion(habitId) {
     const streakSpan = document.getElementById(`streak-${habitId}`);
     if (streakSpan) streakSpan.textContent = `${data.streak} дней`;
 
+    // Принудительно обновляем статистику
     await updateTodayProgress();
-    await updateQuickStats();
+    await updateQuickStats(true); // force = true
   } catch (error) {
     console.error("Ошибка:", error);
     showError("Не удалось обновить привычку");
@@ -732,8 +747,9 @@ async function deleteHabit(habitId) {
       if (currentScreen === "habits") {
         await renderHabitsScreen(document.getElementById("screenContainer"));
       }
+      // Принудительно обновляем статистику
       await updateTodayProgress();
-      await updateQuickStats();
+      await updateQuickStats(true); // force = true
     }
   } catch (error) {
     console.error("Ошибка удаления:", error);
@@ -777,8 +793,9 @@ async function createHabit() {
     selectedEmoji = DEFAULT_EMOJI;
     window.selectedEmoji = selectedEmoji;
 
+    // Принудительно обновляем статистику
     await updateTodayProgress();
-    await updateQuickStats();
+    await updateQuickStats(true); // force = true
     showScreen("habits");
   } catch (error) {
     console.error("Ошибка при добавлении привычки:", error);
@@ -844,7 +861,9 @@ function renderMainScreen(container) {
   `;
 
   container.innerHTML = html;
-  updateQuickStats();
+
+  // Загружаем статистику при открытии главной
+  updateQuickStats(true); // force = true при первой загрузке
 }
 
 // ===== ПОЛНОСТЬЮ ОБНОВЛЕННАЯ ФУНКЦИЯ СТАТИСТИКИ =====
@@ -1198,11 +1217,19 @@ function showScreen(screenName) {
   const container = document.getElementById("screenContainer");
   const navBack = document.getElementById("navBackBtn");
   const navTitle = document.getElementById("navTitle");
+  const progressBlock = document.getElementById("progressBlock");
+  const navBar = document.getElementById("navBar");
+
+  // Навигационная панель всегда видна
+  navBar.style.display = "flex";
 
   if (screenName === "main") {
+    // На главном экране скрываем кнопку назад
     navBack.style.display = "none";
     navTitle.textContent = "Главное меню";
+    progressBlock.style.display = "block";
   } else {
+    // В разделах показываем кнопку назад
     navBack.style.display = "block";
 
     const titles = {
@@ -1212,10 +1239,13 @@ function showScreen(screenName) {
       leaderboard: "Рейтинг",
     };
     navTitle.textContent = titles[screenName] || "Habit Power";
+    progressBlock.style.display = "none";
   }
 
-  container.innerHTML =
-    '<div class="screen" style="text-align: center; padding: 50px;">Загрузка...</div>';
+  // Плавное исчезновение контента
+  container.style.opacity = "0";
+  container.style.transform = "translateY(10px)";
+  container.style.transition = "opacity 0.2s ease, transform 0.2s ease";
 
   setTimeout(() => {
     switch (screenName) {
@@ -1235,8 +1265,18 @@ function showScreen(screenName) {
         renderLeaderboardScreen(container);
         break;
     }
-    updateTodayProgress();
-  }, 10);
+
+    // Обновляем прогресс только если мы на главном экране
+    if (screenName === "main") {
+      updateTodayProgress();
+    }
+
+    // Плавное появление
+    setTimeout(() => {
+      container.style.opacity = "1";
+      container.style.transform = "translateY(0)";
+    }, 50);
+  }, 150);
 }
 
 window.showScreen = showScreen;
@@ -1249,11 +1289,14 @@ function switchTab(tabName) {
 
   const progressBlock = document.getElementById("progressBlock");
   const navBar = document.getElementById("navBar");
+  const navBack = document.getElementById("navBackBtn");
+  const navTitle = document.getElementById("navTitle");
   const headerTitle = document.getElementById("mainHeaderTitle");
   const container = document.getElementById("screenContainer");
   const tabHome = document.getElementById("tabHome");
   const tabProfile = document.getElementById("tabProfile");
 
+  // Обновляем активный таб
   if (tabHome && tabProfile) {
     if (tabName === "home") {
       tabHome.classList.add("active");
@@ -1264,24 +1307,40 @@ function switchTab(tabName) {
     }
   }
 
-  if (tabName === "home") {
-    progressBlock.style.display = "block";
-    navBar.style.display = "flex";
-    headerTitle.textContent = "Habit Power";
-    showScreen("main");
-  } else {
-    progressBlock.style.display = "none";
-    navBar.style.display = "none";
-    headerTitle.textContent = "Мой профиль";
+  // Плавное исчезновение
+  container.style.opacity = "0";
+  container.style.transform = "translateY(10px)";
+  container.style.transition = "opacity 0.2s ease, transform 0.2s ease";
 
-    container.innerHTML =
-      '<div class="screen" style="text-align: center; padding: 50px;">Загрузка...</div>';
+  setTimeout(() => {
+    if (tabName === "home") {
+      // На главной вкладке
+      progressBlock.style.display = "block";
+      navBar.style.display = "flex";
+      navBack.style.display = "none";
+      navTitle.textContent = "Главное меню";
+      headerTitle.textContent = "Habit Power";
 
-    setTimeout(async () => {
-      await loadUserProfile();
+      renderMainScreen(container);
+      updateQuickStats(true);
+      updateTodayProgress();
+    } else {
+      // В профиле
+      progressBlock.style.display = "none";
+      navBar.style.display = "flex";
+      navBack.style.display = "block";
+      navTitle.textContent = "Мой профиль";
+      headerTitle.textContent = "Мой профиль";
+
       renderProfileScreen(container);
-    }, 10);
-  }
+    }
+
+    // Плавное появление
+    setTimeout(() => {
+      container.style.opacity = "1";
+      container.style.transform = "translateY(0)";
+    }, 50);
+  }, 150);
 }
 
 window.switchTab = switchTab;
@@ -1314,8 +1373,15 @@ async function initApp() {
     await loadUserProfile();
     switchTab("home");
 
+    // Кнопка "Назад" в навигации
     document.getElementById("navBackBtn").addEventListener("click", () => {
-      showScreen("main");
+      if (currentTab === "profile") {
+        // Если мы в профиле, возвращаемся на главную вкладку
+        switchTab("home");
+      } else {
+        // Если мы в разделе, возвращаемся на главный экран
+        showScreen("main");
+      }
     });
 
     const closeEmojiPickerBtn = document.getElementById("closeEmojiPickerBtn");
@@ -1331,11 +1397,6 @@ async function initApp() {
         }
       });
     }
-
-    setInterval(() => {
-      updateTodayProgress();
-      updateQuickStats();
-    }, 30000);
   } catch (error) {
     console.error("Ошибка при инициализации:", error);
     showError("Ошибка при подключении к серверу");

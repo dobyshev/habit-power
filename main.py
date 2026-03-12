@@ -2,10 +2,9 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel
-from datetime import date, datetime, timedelta
 import re
 
 from database import engine, get_db
@@ -69,6 +68,22 @@ class HabitResponse(BaseModel):
     emoji: Optional[str] = None
 
 
+class HabitCompleteResponse(BaseModel):
+    status: str
+    points: int
+    streak: int
+    points_earned: int
+
+
+class HabitUndoResponse(BaseModel):
+    status: str
+    habit_id: int
+    streak: int
+    points: int
+    completed_today: bool
+    points_removed: int
+
+
 class LeaderboardResponse(BaseModel):
     telegram_id: int
     points: int
@@ -76,7 +91,7 @@ class LeaderboardResponse(BaseModel):
     emoji: Optional[str] = None
 
 
-# 👇 НОВЫЕ PYDANTIC МОДЕЛИ ДЛЯ ПРОФИЛЯ
+# Модели для профиля
 class UsernameCheckRequest(BaseModel):
     telegram_id: int
     username: str
@@ -104,6 +119,12 @@ class UpdateProfileRequest(BaseModel):
     emoji: str
 
 
+# Модель для активности
+class ActivityRequest(BaseModel):
+    telegram_id: int
+    days: Optional[int] = 30
+
+
 # API Endpoints
 @app.post("/api/user")
 async def create_or_get_user(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -125,7 +146,6 @@ async def create_or_get_user(user_data: UserCreate, db: Session = Depends(get_db
     return {"status": "success", "user_id": user.id, "points": user.points}
 
 
-# 👇 НОВЫЙ ЭНДПОИНТ: Проверка уникальности имени
 @app.post("/api/check-username", response_model=UsernameCheckResponse)
 async def check_username(request: UsernameCheckRequest, db: Session = Depends(get_db)):
     """Проверяет, доступно ли имя пользователя"""
@@ -157,7 +177,6 @@ async def check_username(request: UsernameCheckRequest, db: Session = Depends(ge
     return {"available": True, "reason": None}
 
 
-# 👇 НОВЫЙ ЭНДПОИНТ: Получение профиля пользователя
 @app.post("/api/user-profile", response_model=UserProfileResponse)
 async def get_user_profile(request: UserProfileRequest, db: Session = Depends(get_db)):
     """Возвращает профиль пользователя"""
@@ -189,7 +208,6 @@ async def get_user_profile(request: UserProfileRequest, db: Session = Depends(ge
     }
 
 
-# 👇 НОВЫЙ ЭНДПОИНТ: Обновление профиля
 @app.post("/api/update-profile")
 async def update_profile(request: UpdateProfileRequest, db: Session = Depends(get_db)):
     """Обновляет профиль пользователя (имя и эмодзи)"""
@@ -317,9 +335,9 @@ async def delete_habit(habit_data: HabitDelete, db: Session = Depends(get_db)):
     return {"status": "success"}
 
 
-@app.post("/api/complete-habit")
+@app.post("/api/complete-habit", response_model=HabitCompleteResponse)
 async def complete_habit(habit_data: HabitComplete, db: Session = Depends(get_db)):
-    """Отмечает привычку как выполненную"""
+    """Отмечает привычку как выполненную с начислением бонусов за серии"""
     habit = db.query(Habit).filter(Habit.id == habit_data.habit_id).first()
     if not habit:
         raise HTTPException(status_code=404, detail="Habit not found")
@@ -342,20 +360,42 @@ async def complete_habit(habit_data: HabitComplete, db: Session = Depends(get_db
     completion = Completion(habit_id=habit.id, date=today)
     db.add(completion)
 
+    # Сохраняем старый streak для расчета бонуса
+    old_streak = habit.streak
+
     # Увеличиваем streak
     habit.streak += 1
 
+    # Базовые очки за выполнение
+    points_earned = 10
+
+    # Проверяем бонусы за серию
+    # Бонус за серию 3 дня (когда streak становится 3)
+    if old_streak < 3 and habit.streak >= 3:
+        points_earned += 5
+        print(f"Бонус за серию 3 дня: +5 очков")
+
+    # Бонус за серию 7 дней (когда streak становится 7)
+    if old_streak < 7 and habit.streak >= 7:
+        points_earned += 25
+        print(f"Бонус за серию 7 дней: +25 очков")
+
     # Добавляем очки пользователю
-    user.points += 10
+    user.points += points_earned
 
     db.commit()
 
-    return {"status": "success", "points": user.points, "streak": habit.streak}
+    return {
+        "status": "success",
+        "points": user.points,
+        "streak": habit.streak,
+        "points_earned": points_earned,
+    }
 
 
-@app.post("/api/undo-habit")
+@app.post("/api/undo-habit", response_model=HabitUndoResponse)
 async def undo_habit(habit_data: HabitUndo, db: Session = Depends(get_db)):
-    """Отменяет выполнение привычки"""
+    """Отменяет выполнение привычки с корректным списанием очков"""
     # Получаем привычку
     habit = db.query(Habit).filter(Habit.id == habit_data.habit_id).first()
     if not habit:
@@ -381,13 +421,28 @@ async def undo_habit(habit_data: HabitUndo, db: Session = Depends(get_db)):
     # Удаляем запись о выполнении
     db.delete(existing_completion)
 
+    # Сохраняем старый streak для расчета отнимаемых очков
+    old_streak = habit.streak
+
     # Уменьшаем streak (но не ниже 0)
     if habit.streak > 0:
         habit.streak -= 1
 
+    # Рассчитываем, сколько очков нужно отнять
+    points_to_remove = 10  # Базовое выполнение
+
+    # Если была достигнута серия 7 дней, отнимаем бонус
+    if old_streak >= 7:
+        points_to_remove += 25
+    # Если была достигнута серия 3 дня, отнимаем бонус
+    elif old_streak >= 3:
+        points_to_remove += 5
+
     # Отнимаем очки у пользователя (но не ниже 0)
-    if user.points >= 10:
-        user.points -= 10
+    if user.points >= points_to_remove:
+        user.points -= points_to_remove
+    else:
+        user.points = 0
 
     db.commit()
 
@@ -397,15 +452,8 @@ async def undo_habit(habit_data: HabitUndo, db: Session = Depends(get_db)):
         "streak": habit.streak,
         "points": user.points,
         "completed_today": False,
+        "points_removed": points_to_remove,
     }
-
-
-# ===== НОВЫЙ ЭНДПОИНТ ДЛЯ АКТИВНОСТИ =====
-
-
-class ActivityRequest(BaseModel):
-    telegram_id: int
-    days: Optional[int] = 30
 
 
 @app.post("/api/habit-activity")

@@ -1180,15 +1180,26 @@ async function renderLeaderboardScreen(container) {
     `;
 
     if (leaderboard.length === 0) {
-      html += '<div class="empty-state">Пока нет участников</div>';
+      html += '<div class="empty-state">✨ Пока нет участников</div>';
     } else {
       leaderboard.forEach((user, index) => {
+        // Определяем эмодзи для первых трех мест
+        let rankEmoji = "";
+        if (index === 0) rankEmoji = "🥇";
+        else if (index === 1) rankEmoji = "🥈";
+        else if (index === 2) rankEmoji = "🥉";
+
         html += `
           <div class="leaderboard-item">
-            <div class="leaderboard-rank">#${index + 1}</div>
+            <div class="leaderboard-rank">${rankEmoji || "#" + (index + 1)}</div>
             <div class="leaderboard-info">
-              <div class="leaderboard-id">${user.username || "Пользователь " + user.telegram_id}</div>
-              <div class="leaderboard-points">⭐ <span>${user.points}</span> очков</div>
+              <div class="leaderboard-id">
+                <span class="leaderboard-emoji">${user.emoji || "👤"}</span>
+                <span>${user.username || "Пользователь " + user.telegram_id}</span>
+              </div>
+              <div class="leaderboard-points">
+                ⭐ ${user.points} <span>очков</span>
+              </div>
             </div>
           </div>
         `;
@@ -1204,7 +1215,7 @@ async function renderLeaderboardScreen(container) {
   } catch (error) {
     console.error("Ошибка загрузки рейтинга:", error);
     container.innerHTML =
-      '<div class="screen"><div class="error-message">Ошибка при загрузке рейтинга</div></div>';
+      '<div class="screen"><div class="error-message">Не удалось загрузить рейтинг</div></div>';
   }
 }
 

@@ -620,7 +620,7 @@ function renderQuickStats(points, totalCompletions, maxStreak) {
 
 window.renderQuickStats = renderQuickStats;
 
-// ===== ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ ПРОГРЕССА =====
+// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ ПРОГРЕССА =====
 
 async function updateTodayProgress() {
   if (!telegramId) return;
@@ -638,6 +638,18 @@ async function updateTodayProgress() {
     const completedToday = habits.filter(
       (habit) => habit.completed_today,
     ).length;
+    const incompleteCount = totalHabits - completedToday;
+
+    // Обновляем бейдж на главном экране, если он виден
+    const badge = document.querySelector(".menu-card-badge.red");
+    if (badge) {
+      if (incompleteCount > 0) {
+        badge.textContent = incompleteCount;
+        badge.style.display = "flex";
+      } else {
+        badge.style.display = "none";
+      }
+    }
 
     const percentEl = document.getElementById("progressPercent");
     const textEl = document.getElementById("progressText");
@@ -805,65 +817,140 @@ async function createHabit() {
 
 window.createHabit = createHabit;
 
-// ===== ФУНКЦИИ ОТРИСОВКИ ЭКРАНОВ =====
+// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ ГЛАВНОГО ЭКРАНА =====
 
 function renderMainScreen(container) {
-  const menuItems = [
-    {
-      id: "habits",
-      icon: "📋",
-      title: "Мои привычки",
-      desc: "Управление",
-    },
-    {
-      id: "create",
-      icon: "➕",
-      title: "Создать привычку",
-      desc: "Добавить",
-    },
-    {
-      id: "stats",
-      icon: "📊",
-      title: "Статистика",
-      desc: "Прогресс",
-    },
-    {
-      id: "leaderboard",
-      icon: "🏆",
-      title: "Рейтинг",
-      desc: "Топ пользователей",
-    },
-  ];
+  // Получаем привычки для подсчета невыполненных
+  fetch(`${API_BASE}/api/habits/${telegramId}`)
+    .then((response) => response.json())
+    .then((habits) => {
+      const totalHabits = habits.length;
+      const completedToday = habits.filter((h) => h.completed_today).length;
+      const incompleteCount = totalHabits - completedToday;
 
-  let html = `
-    <div class="screen">
-      <div class="menu-grid">
-  `;
+      const menuItems = [
+        {
+          id: "habits",
+          icon: "📋",
+          title: "Мои привычки",
+          desc: "Управление привычками",
+          badge: incompleteCount > 0 ? incompleteCount : null,
+          badgeColor: "red",
+        },
+        {
+          id: "create",
+          icon: "✨",
+          title: "Создать привычку",
+          desc: "Добавить новую",
+          badge: null,
+        },
+        {
+          id: "stats",
+          icon: "📊",
+          title: "Статистика",
+          desc: "Прогресс и достижения",
+          badge: null,
+        },
+        {
+          id: "leaderboard",
+          icon: "🏆",
+          title: "Рейтинг",
+          desc: "Топ пользователей",
+          badge: null,
+        },
+      ];
 
-  menuItems.forEach((item) => {
-    html += `
-      <div class="menu-card" onclick="window.showScreen('${item.id}')">
-        <div class="menu-card-title">
-          <span class="menu-card-icon">${item.icon}</span>
-          <span>${item.title}</span>
+      let html = `
+        <div class="screen">
+          <div class="menu-grid">
+      `;
+
+      menuItems.forEach((item) => {
+        html += `
+          <div class="menu-card" onclick="window.showScreen('${item.id}')">
+            <div class="menu-card-title">
+              <span class="menu-card-icon">${item.icon}</span>
+              <span>${item.title}</span>
+            </div>
+            <div class="menu-card-desc">${item.desc}</div>
+            ${item.badge ? `<div class="menu-card-badge ${item.badgeColor}">${item.badge}</div>` : ""}
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+          <div class="quick-stats-wrapper">
+            <div class="quick-stats-grid" id="quickStatsGrid"></div>
+          </div>
         </div>
-        <div class="menu-card-desc">${item.desc}</div>
-      </div>
-    `;
-  });
+      `;
 
-  html += `
-      </div>
-      <div class="quick-stats-wrapper">
-        <div class="quick-stats-grid" id="quickStatsGrid"></div>
-      </div>
-    </div>
-  `;
+      container.innerHTML = html;
+      updateQuickStats(true);
+    })
+    .catch((error) => {
+      console.error("Ошибка загрузки привычек:", error);
+      // Если ошибка, показываем без бейджа
+      const menuItems = [
+        {
+          id: "habits",
+          icon: "📋",
+          title: "Мои привычки",
+          desc: "Управление привычками",
+          badge: null,
+        },
+        {
+          id: "create",
+          icon: "✨",
+          title: "Создать привычку",
+          desc: "Добавить новую",
+          badge: null,
+        },
+        {
+          id: "stats",
+          icon: "📊",
+          title: "Статистика",
+          desc: "Прогресс и достижения",
+          badge: null,
+        },
+        {
+          id: "leaderboard",
+          icon: "🏆",
+          title: "Рейтинг",
+          desc: "Топ пользователей",
+          badge: null,
+        },
+      ];
 
-  container.innerHTML = html;
+      let html = `
+        <div class="screen">
+          <div class="menu-grid">
+      `;
 
-  // Загружаем статистику при открытии главной
-  updateQuickStats(true); // force = true при первой загрузке
+      menuItems.forEach((item) => {
+        html += `
+          <div class="menu-card" onclick="window.showScreen('${item.id}')">
+            <div class="menu-card-title">
+              <span class="menu-card-icon">${item.icon}</span>
+              <span>${item.title}</span>
+            </div>
+            <div class="menu-card-desc">${item.desc}</div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+          <div class="quick-stats-wrapper">
+            <div class="quick-stats-grid" id="quickStatsGrid"></div>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      updateQuickStats(true);
+    });
 }
 
 // ===== ОБНОВЛЕННАЯ ФУНКЦИЯ СТАТИСТИКИ (БЕЗ БОЛЬШОГО БЛОКА ОЧКОВ) =====
@@ -1190,7 +1277,7 @@ async function renderLeaderboardScreen(container) {
         <!-- Блок "Ваше место" (всегда показываем, даже если пользователя нет в топе) -->
         <div class="user-rank-card">
           <div class="user-rank-header">
-            <span class="user-rank-label">🎯 Ваше место</span>
+            <span class="user-rank-label"> Ваше место</span>
             <span class="user-rank-number">#${currentUserRank || "—"}</span>
           </div>
           <div class="user-rank-stats">
@@ -1216,38 +1303,39 @@ async function renderLeaderboardScreen(container) {
         <!-- Список остальных участников -->
         <div class="leaderboard-list">
           <h3 class="leaderboard-list-title">Все участники</h3>
-          ${restUsers
-            .map(
-              (user, index) => `
-            <div class="leaderboard-list-item ${user.telegram_id === telegramId ? "current-user" : ""}">
-              <div class="list-item-rank">#${index + 4}</div>
-              <div class="list-item-avatar">
-                <span class="list-item-emoji">${user.emoji || "👤"}</span>
+          ${
+            restUsers.length > 0
+              ? `
+            ${restUsers
+              .map(
+                (user, index) => `
+              <div class="leaderboard-list-item ${user.telegram_id === telegramId ? "current-user" : ""}">
+                <div class="list-item-rank">#${index + 4}</div>
+                <div class="list-item-avatar">
+                  <span class="list-item-emoji">${user.emoji || "👤"}</span>
+                </div>
+                <div class="list-item-info">
+                  <div class="list-item-name">${user.username || `Пользователь ${user.telegram_id}`}</div>
+                  <div class="list-item-username">@${user.username || `user_${user.telegram_id}`}</div>
+                </div>
+                <div class="list-item-stats">
+                  <div class="list-item-points">${user.points}</div>
+                  <div class="list-item-streak">${user.streak || 0} дн.</div>
+                </div>
               </div>
-              <div class="list-item-info">
-                <div class="list-item-name">${user.username || `Пользователь ${user.telegram_id}`}</div>
-                <div class="list-item-username">@${user.username || `user_${user.telegram_id}`}</div>
-              </div>
-              <div class="list-item-stats">
-                <div class="list-item-points">${user.points}</div>
-                <div class="list-item-streak">${user.streak || 0} дн.</div>
+            `,
+              )
+              .join("")}
+          `
+              : `
+            <div class="empty-state-spacer">
+              <div class="empty-state-message">
+                Пока нет других участников
               </div>
             </div>
-          `,
-            )
-            .join("")}
+          `
+          }
         </div>
-
-        <!-- Если список пуст -->
-        ${
-          restUsers.length === 0
-            ? `
-          <div class="empty-state">
-            Пока нет других участников
-          </div>
-        `
-            : ""
-        }
       </div>
     `;
 

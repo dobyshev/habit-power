@@ -1161,54 +1161,162 @@ function renderCreateScreen(container) {
   });
 }
 
+// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ РЕЙТИНГА =====
+
 async function renderLeaderboardScreen(container) {
   try {
     const response = await fetch(`${API_BASE}/api/leaderboard`);
     const leaderboard = await response.json();
 
-    let html = `
-      <div class="screen">
-        <div class="leaderboard-card">
-    `;
+    // Находим текущего пользователя в рейтинге
+    const currentUserIndex = leaderboard.findIndex(
+      (user) => user.telegram_id === telegramId,
+    );
+    const currentUserRank =
+      currentUserIndex !== -1 ? currentUserIndex + 1 : null;
+    const currentUser =
+      currentUserIndex !== -1 ? leaderboard[currentUserIndex] : null;
 
-    if (leaderboard.length === 0) {
-      html += '<div class="empty-state">✨ Пока нет участников</div>';
-    } else {
-      leaderboard.forEach((user, index) => {
-        // Определяем эмодзи для первых трех мест
-        let rankEmoji = "";
-        if (index === 0) rankEmoji = "🥇";
-        else if (index === 1) rankEmoji = "🥈";
-        else if (index === 2) rankEmoji = "🥉";
+    // Разделяем на топ-3 и остальных
+    const topThree = leaderboard.slice(0, 3);
+    const restUsers = leaderboard.slice(3, 20); // Показываем до 20 пользователей
 
-        html += `
-          <div class="leaderboard-item">
-            <div class="leaderboard-rank">${rankEmoji || "#" + (index + 1)}</div>
-            <div class="leaderboard-info">
-              <div class="leaderboard-id">
-                <span class="leaderboard-emoji">${user.emoji || "👤"}</span>
-                <span>${user.username || "Пользователь " + user.telegram_id}</span>
-              </div>
-              <div class="leaderboard-points">
-                ⭐ ${user.points} <span>очков</span>
-              </div>
+    const html = `
+      <div class="screen leaderboard-screen">
+        <!-- Заголовок -->
+        <h2 class="leaderboard-main-title">Рейтинг</h2>
+        <p class="leaderboard-subtitle">Таблица лидеров</p>
+
+        <!-- Блок "Ваше место" (всегда показываем, даже если пользователя нет в топе) -->
+        <div class="user-rank-card">
+          <div class="user-rank-header">
+            <span class="user-rank-label">🎯 Ваше место</span>
+            <span class="user-rank-number">#${currentUserRank || "—"}</span>
+          </div>
+          <div class="user-rank-stats">
+            <div class="user-rank-points">
+              <span class="points-value">${currentUser?.points || 0}</span>
+              <span class="points-label">очков</span>
+            </div>
+            <div class="user-rank-streak">
+              <span class="streak-value">${currentUser?.streak || 0}</span>
+              <span class="streak-label">дней</span>
             </div>
           </div>
-        `;
-      });
-    }
-
-    html += `
         </div>
+
+        <!-- Пьедестал (топ-3) -->
+        <div class="podium-section">
+          <h3 class="podium-title">Топ участников</h3>
+          <div class="podium">
+            ${generatePodium(topThree)}
+          </div>
+        </div>
+
+        <!-- Список остальных участников -->
+        <div class="leaderboard-list">
+          <h3 class="leaderboard-list-title">Все участники</h3>
+          ${restUsers
+            .map(
+              (user, index) => `
+            <div class="leaderboard-list-item ${user.telegram_id === telegramId ? "current-user" : ""}">
+              <div class="list-item-rank">#${index + 4}</div>
+              <div class="list-item-avatar">
+                <span class="list-item-emoji">${user.emoji || "👤"}</span>
+              </div>
+              <div class="list-item-info">
+                <div class="list-item-name">${user.username || `Пользователь ${user.telegram_id}`}</div>
+                <div class="list-item-username">@${user.username || `user_${user.telegram_id}`}</div>
+              </div>
+              <div class="list-item-stats">
+                <div class="list-item-points">${user.points}</div>
+                <div class="list-item-streak">${user.streak || 0} дн.</div>
+              </div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+
+        <!-- Если список пуст -->
+        ${
+          restUsers.length === 0
+            ? `
+          <div class="empty-state">
+            Пока нет других участников
+          </div>
+        `
+            : ""
+        }
       </div>
     `;
 
     container.innerHTML = html;
   } catch (error) {
     console.error("Ошибка загрузки рейтинга:", error);
-    container.innerHTML =
-      '<div class="screen"><div class="error-message">Не удалось загрузить рейтинг</div></div>';
+    container.innerHTML = `
+      <div class="screen">
+        <div class="error-message">
+          Не удалось загрузить рейтинг
+        </div>
+      </div>
+    `;
   }
+}
+
+// Функция для генерации пьедестала
+function generatePodium(topThree) {
+  if (topThree.length === 0)
+    return '<div class="empty-podium">Пока нет участников</div>';
+
+  // Распределяем места (нужно отсортировать, чтобы 1 место было по центру)
+  const first = topThree[0] || null;
+  const second = topThree[1] || null;
+  const third = topThree[2] || null;
+
+  return `
+    <div class="podium-container">
+      <!-- Второе место (слева) -->
+      <div class="podium-item second">
+        <div class="podium-avatar">
+          <span class="podium-emoji">${second?.emoji || "👤"}</span>
+        </div>
+        <div class="podium-name">${second?.username || "—"}</div>
+        <div class="podium-points">${second?.points || 0} pts</div>
+        <div class="podium-rank">2</div>
+        <div class="podium-stats">
+          <span class="podium-streak">🔥 ${second?.streak || 0}</span>
+        </div>
+      </div>
+
+      <!-- Первое место (центр, самый высокий) -->
+      <div class="podium-item first">
+        <div class="podium-crown">👑</div>
+        <div class="podium-avatar">
+          <span class="podium-emoji">${first?.emoji || "👤"}</span>
+        </div>
+        <div class="podium-name">${first?.username || "—"}</div>
+        <div class="podium-points">${first?.points || 0} pts</div>
+        <div class="podium-rank">1</div>
+        <div class="podium-stats">
+          <span class="podium-streak">🔥 ${first?.streak || 0}</span>
+        </div>
+      </div>
+
+      <!-- Третье место (справа) -->
+      <div class="podium-item third">
+        <div class="podium-avatar">
+          <span class="podium-emoji">${third?.emoji || "👤"}</span>
+        </div>
+        <div class="podium-name">${third?.username || "—"}</div>
+        <div class="podium-points">${third?.points || 0} pts</div>
+        <div class="podium-rank">3</div>
+        <div class="podium-stats">
+          <span class="podium-streak">🔥 ${third?.streak || 0}</span>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // ===== НАВИГАЦИЯ =====

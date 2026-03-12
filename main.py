@@ -89,6 +89,7 @@ class LeaderboardResponse(BaseModel):
     points: int
     username: Optional[str] = None
     emoji: Optional[str] = None
+    streak: Optional[int] = 0  # Добавляем streak в ответ
 
 
 # Модели для профиля
@@ -512,12 +513,18 @@ async def get_leaderboard(db: Session = Depends(get_db)):
     result = []
     for user in users:
         profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+
+        # Получаем максимальный streak пользователя
+        habits = db.query(Habit).filter(Habit.user_id == user.id).all()
+        max_streak = max([habit.streak for habit in habits], default=0)
+
         result.append(
             {
                 "telegram_id": user.telegram_id,
                 "points": user.points,
                 "username": profile.username if profile else None,
                 "emoji": profile.emoji if profile else "😀",
+                "streak": max_streak,  # Добавляем максимальный streak
             }
         )
 

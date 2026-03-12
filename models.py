@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, BigInteger, DateTime
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Date,
+    ForeignKey,
+    BigInteger,
+    DateTime,
+    Boolean,
+)
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import date, datetime
@@ -18,6 +27,9 @@ class User(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    reminders = relationship(
+        "Reminder", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class Habit(Base):
@@ -33,6 +45,9 @@ class Habit(Base):
     completions = relationship(
         "Completion", back_populates="habit", cascade="all, delete-orphan"
     )
+    reminder = relationship(
+        "Reminder", back_populates="habit", uselist=False, cascade="all, delete-orphan"
+    )
 
 
 class Completion(Base):
@@ -45,7 +60,6 @@ class Completion(Base):
     habit = relationship("Habit", back_populates="completions")
 
 
-# 👇 НОВЫЕ МОДЕЛИ ДЛЯ ПРОФИЛЯ
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 
@@ -68,3 +82,18 @@ class UsernameHistory(Base):
     telegram_id = Column(BigInteger, index=True)
     username = Column(String(50))
     changed_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Reminder(Base):
+    __tablename__ = "reminders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    habit_id = Column(Integer, ForeignKey("habits.id"), nullable=False, unique=True)
+    reminder_time = Column(String(5), nullable=False)  # Формат "HH:MM"
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="reminders")
+    habit = relationship("Habit", back_populates="reminder")

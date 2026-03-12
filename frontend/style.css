@@ -70,6 +70,17 @@ body {
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+  transition: all 0.2s ease;
+}
+
+/* Специальный стиль для заголовка в профиле - только белый и больше */
+.main-header h1.profile-header {
+  font-size: 48px; /* Увеличиваем размер */
+  color: var(--text-primary); /* Чисто белый */
+  text-align: left;
+  margin: 20px 0 10px 0;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 /* ===== НАВИГАЦИЯ ===== */
@@ -191,7 +202,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 12px; /* Уменьшили отступ снизу */
 }
 
 .menu-card {
@@ -295,7 +306,7 @@ body {
 
 /* ===== БЛОК БЫСТРОЙ СТАТИСТИКИ ===== */
 .quick-stats-wrapper {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .quick-stats-grid {
@@ -1791,4 +1802,525 @@ body {
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   margin: 20px 0;
+}
+
+/* ===== ЭКРАН НАПОМИНАНИЙ ===== */
+
+.reminders-screen {
+  padding-bottom: 20px;
+}
+
+.reminders-main-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.reminders-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.reminders-info-card {
+  background: linear-gradient(
+    135deg,
+    rgba(46, 204, 113, 0.1),
+    rgba(52, 152, 219, 0.1)
+  );
+  border: 1px solid rgba(46, 204, 113, 0.2);
+  border-radius: 32px;
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.reminders-info-icon {
+  font-size: 32px;
+  min-width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reminders-info-text h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.reminders-info-text p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+.reminders-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 32px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.reminders-list-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.reminder-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.reminder-item:hover {
+  border-color: rgba(46, 204, 113, 0.3);
+  transform: translateX(4px);
+}
+
+.reminder-item-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reminder-item-icon {
+  font-size: 28px;
+  min-width: 48px;
+  height: 48px;
+  background: var(--bg-card);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+}
+
+.reminder-item-info {
+  flex: 1;
+}
+
+.reminder-item-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.reminder-item-time {
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.reminder-item-time:hover {
+  background: rgba(46, 204, 113, 0.1);
+  color: var(--accent-green);
+}
+
+.reminder-time-value {
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
+.reminder-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  margin-left: auto;
+}
+
+.reminder-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.reminder-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-color);
+  transition: 0.2s;
+  border-radius: 34px;
+}
+
+.reminder-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+input:checked + .reminder-slider {
+  background-color: var(--accent-green);
+}
+
+input:checked + .reminder-slider:before {
+  transform: translateX(24px);
+  background-color: white;
+}
+
+.reminder-active-badge {
+  margin-top: 10px;
+  margin-left: 60px;
+  font-size: 13px;
+  color: var(--accent-green);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.active-indicator {
+  font-size: 14px;
+}
+
+/* Расписание */
+.reminders-schedule {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 32px;
+  padding: 20px;
+}
+
+.reminders-schedule-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.schedule-time {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-green);
+  min-width: 60px;
+  background: rgba(46, 204, 113, 0.1);
+  padding: 4px 8px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.schedule-habits {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.schedule-habit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  padding: 6px 12px;
+  border-radius: 30px;
+  border: 1px solid var(--border-color);
+}
+
+.schedule-emoji {
+  font-size: 16px;
+}
+
+.schedule-name {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+/* Time Picker */
+.time-picker-content {
+  max-width: 340px;
+}
+
+.time-picker-grid {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  justify-content: center;
+}
+
+.time-picker-column {
+  flex: 1;
+  text-align: center;
+}
+
+.time-picker-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time-picker-scroll {
+  height: 200px;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border-radius: 20px;
+  padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-green) var(--border-color);
+}
+
+.time-picker-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.time-picker-scroll::-webkit-scrollbar-track {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.time-picker-scroll::-webkit-scrollbar-thumb {
+  background: var(--accent-green);
+  border-radius: 4px;
+}
+
+.time-picker-item {
+  padding: 10px;
+  margin: 4px 0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.time-picker-item:hover {
+  background: rgba(46, 204, 113, 0.1);
+}
+
+.time-picker-item.selected {
+  background: var(--accent-green);
+  color: white;
+  transform: scale(1.02);
+}
+
+.time-picker-footer {
+  display: flex;
+  gap: 10px;
+  padding: 0 20px 20px;
+}
+
+.time-picker-cancel,
+.time-picker-confirm {
+  flex: 1;
+  padding: 14px;
+  border-radius: 28px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.time-picker-cancel {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.time-picker-cancel:hover {
+  background: var(--hover-color);
+}
+
+.time-picker-confirm {
+  background: linear-gradient(135deg, var(--accent-green), #27ae60);
+  color: white;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+}
+
+.time-picker-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(46, 204, 113, 0.4);
+}
+
+/* Адаптивность */
+@media (max-width: 400px) {
+  .reminders-info-card {
+    padding: 16px;
+  }
+
+  .reminder-item {
+    padding: 12px;
+  }
+
+  .reminder-item-icon {
+    font-size: 24px;
+    min-width: 42px;
+    height: 42px;
+  }
+
+  .schedule-item {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .schedule-time {
+    align-self: flex-start;
+  }
+
+  .time-picker-scroll {
+    height: 160px;
+  }
+
+  .time-picker-item {
+    padding: 8px;
+    font-size: 16px;
+  }
+}
+
+/* ===== ДЛИННЫЙ БЛОК НАПОМИНАНИЙ ===== */
+
+/* Длинный блок напоминаний */
+.wide-menu-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 32px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 12px 0; /* Одинаковые отступы сверху и снизу */
+  width: 100%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.wide-menu-card:hover {
+  background: var(--hover-color);
+  transform: translateY(-2px);
+  border-color: rgba(46, 204, 113, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.wide-menu-card-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.wide-menu-card-icon {
+  font-size: 32px;
+  min-width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-yellow);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  transition: all 0.2s ease;
+}
+
+.wide-menu-card:hover .wide-menu-card-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.wide-menu-card-text {
+  flex: 1;
+}
+
+.wide-menu-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.wide-menu-card-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Последний ряд меню */
+.menu-grid:last-of-type {
+  margin-bottom: 24px; /* Отступ перед быстрой статистикой */
+}
+
+/* Обновленный стиль для скролла минут */
+.minutes-scroll {
+  height: 300px !important;
+}
+
+.minutes-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.minutes-scroll::-webkit-scrollbar-track {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.minutes-scroll::-webkit-scrollbar-thumb {
+  background: var(--accent-green);
+  border-radius: 4px;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 400px) {
+  .wide-menu-card {
+    padding: 16px;
+  }
+
+  .wide-menu-card-icon {
+    font-size: 28px;
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .wide-menu-card-title {
+    font-size: 16px;
+  }
+
+  .wide-menu-card-desc {
+    font-size: 13px;
+  }
+
+  .minutes-scroll {
+    height: 250px !important;
+  }
 }

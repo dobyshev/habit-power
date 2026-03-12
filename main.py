@@ -8,7 +8,7 @@ from pydantic import BaseModel
 import re
 
 from database import engine, get_db
-from models import Base, User, Habit, Completion, UserProfile, UsernameHistory
+from models import Base, User, Habit, Completion, UserProfile, UsernameHistory, Reminder
 
 # Создание таблиц
 Base.metadata.create_all(bind=engine)
@@ -89,7 +89,7 @@ class LeaderboardResponse(BaseModel):
     points: int
     username: Optional[str] = None
     emoji: Optional[str] = None
-    streak: Optional[int] = 0  # Добавляем streak в ответ
+    streak: Optional[int] = 0
 
 
 # Модели для профиля
@@ -124,6 +124,33 @@ class UpdateProfileRequest(BaseModel):
 class ActivityRequest(BaseModel):
     telegram_id: int
     days: Optional[int] = 30
+
+
+# Модели для напоминаний
+class ReminderCreate(BaseModel):
+    telegram_id: int
+    habit_id: int
+    reminder_time: str
+    is_active: bool = True
+
+
+class ReminderUpdate(BaseModel):
+    reminder_id: int
+    reminder_time: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ReminderResponse(BaseModel):
+    id: int
+    habit_id: int
+    habit_name: str
+    habit_emoji: str
+    reminder_time: str
+    is_active: bool
+
+
+class ReminderDelete(BaseModel):
+    reminder_id: int
 
 
 # API Endpoints
@@ -524,11 +551,130 @@ async def get_leaderboard(db: Session = Depends(get_db)):
                 "points": user.points,
                 "username": profile.username if profile else None,
                 "emoji": profile.emoji if profile else "😀",
-                "streak": max_streak,  # Добавляем максимальный streak
+                "streak": max_streak,
             }
         )
 
     return result
+
+
+# Эндпоинты для напоминаний
+@app.get("/api/reminders/{telegram_id}", response_model=List[ReminderResponse])
+async def get_reminders(telegram_id: int, db: Session = Depends(get_db)):
+    """Возвращает все напоминания пользователя"""
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+    if not user:
+        return []
+
+    reminders = db.query(Reminder).filter(Reminder.user_id == user.id).all()
+
+    result = []
+    for reminder in reminders:
+        habit = db.query(Habit).filter(Habit.id == reminder.habit_id).first()
+        if habit:
+            result.append(
+                {
+                    "id": reminder.id,
+                    "habit_id": habit.id,
+                    "habit_name": habit.name,
+                    "habit_emoji": habit.emoji or "📋",
+                    "reminder_time": reminder.reminder_time,
+                    "is_active": reminder.is_active,
+                }
+            )
+
+    # Сортируем по времени
+    result.sort(key=lambda x: x["reminder_time"])
+    return result
+
+
+@app.post("/api/add-reminder")
+async def add_reminder(reminder_data: ReminderCreate, db: Session = Depends(get_db)):
+    """Добавляет напоминание для привычки"""
+    user = db.query(User).filter(User.telegram_id == reminder_data.telegram_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    habit = db.query(Habit).filter(Habit.id == reminder_data.habit_id).first()
+    if not habit:
+        raise HTTPException(status_code=404, detail="Habit not found")
+
+    # Проверяем валидность времени
+    time_pattern = re.compile(r"^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
+    if not time_pattern.match(reminder_data.reminder_time):
+        raise HTTPException(status_code=400, detail="Invalid time format. Use HH:MM")
+
+    # Проверяем, есть ли уже напоминание для этой привычки
+    existing = (
+        db.query(Reminder)
+        .filter(
+            Reminder.user_id == user.id, Reminder.habit_id == reminder_data.habit_id
+        )
+        .first()
+    )
+
+    if existing:
+        # Обновляем существующее
+        existing.reminder_time = reminder_data.reminder_time
+        existing.is_active = reminder_data.is_active
+        existing.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(existing)
+        return {"status": "success", "reminder_id": existing.id}
+    else:
+        # Создаем новое
+        new_reminder = Reminder(
+            user_id=user.id,
+            habit_id=reminder_data.habit_id,
+            reminder_time=reminder_data.reminder_time,
+            is_active=reminder_data.is_active,
+        )
+        db.add(new_reminder)
+        db.commit()
+        db.refresh(new_reminder)
+        return {"status": "success", "reminder_id": new_reminder.id}
+
+
+@app.post("/api/update-reminder")
+async def update_reminder(reminder_data: ReminderUpdate, db: Session = Depends(get_db)):
+    """Обновляет напоминание"""
+    reminder = (
+        db.query(Reminder).filter(Reminder.id == reminder_data.reminder_id).first()
+    )
+    if not reminder:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+
+    if reminder_data.reminder_time is not None:
+        # Проверяем валидность времени
+        time_pattern = re.compile(r"^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
+        if not time_pattern.match(reminder_data.reminder_time):
+            raise HTTPException(
+                status_code=400, detail="Invalid time format. Use HH:MM"
+            )
+        reminder.reminder_time = reminder_data.reminder_time
+
+    if reminder_data.is_active is not None:
+        reminder.is_active = reminder_data.is_active
+
+    reminder.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {"status": "success"}
+
+
+@app.post("/api/delete-reminder")
+async def delete_reminder(reminder_data: ReminderDelete, db: Session = Depends(get_db)):
+    """Удаляет напоминание"""
+    reminder = (
+        db.query(Reminder).filter(Reminder.id == reminder_data.reminder_id).first()
+    )
+    if not reminder:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+
+    db.delete(reminder)
+    db.commit()
+
+    return {"status": "success"}
 
 
 if __name__ == "__main__":

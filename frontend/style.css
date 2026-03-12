@@ -2489,3 +2489,50 @@ body {
     padding: 3px 8px;
   }
 }
+
+/* Убираем все эффекты при нажатии */
+.menu-card:active,
+.quick-stat-card:active,
+.habit-card:active,
+.delete-btn:active,
+.profile-save-btn:active,
+.nav-back:active,
+.tab-item:active,
+.emoji-item:active,
+.close-btn:active {
+  transform: none !important;
+  transition: none !important;
+}
+
+/* Оставляем только hover эффекты */
+.menu-card:hover,
+.quick-stat-card:hover,
+.habit-card:hover,
+.nav-back:hover,
+.tab-item:hover,
+.emoji-item:hover {
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+}
+
+/* Убираем transform при нажатии */
+.menu-card:active {
+  transform: none !important;
+}
+
+/* ===== ЗАГРУЗОЧНЫЙ СПИННЕР ===== */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--accent-green);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

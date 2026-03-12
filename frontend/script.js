@@ -1322,6 +1322,9 @@ function generatePodium(topThree) {
 // ===== НАВИГАЦИЯ =====
 
 function showScreen(screenName) {
+  // Если уже на этом экране, ничего не делаем
+  if (currentScreen === screenName) return;
+
   currentScreen = screenName;
   window.currentScreen = currentScreen;
 
@@ -1330,21 +1333,17 @@ function showScreen(screenName) {
   const navTitle = document.getElementById("navTitle");
   const progressBlock = document.getElementById("progressBlock");
   const navBar = document.getElementById("navBar");
-  const mainHeader = document.getElementById("mainHeader");
 
   // Навигационная панель всегда видна
   navBar.style.display = "flex";
 
   if (screenName === "main") {
-    // На главном экране показываем заголовок и прогресс, скрываем кнопку назад
-    mainHeader.style.display = "block";
-    progressBlock.style.display = "block";
+    // На главном экране скрываем кнопку назад
     navBack.style.display = "none";
     navTitle.textContent = "Главное меню";
+    progressBlock.style.display = "block";
   } else {
-    // В разделах скрываем заголовок и прогресс, показываем кнопку назад
-    mainHeader.style.display = "none";
-    progressBlock.style.display = "none";
+    // В разделах показываем кнопку назад
     navBack.style.display = "block";
 
     const titles = {
@@ -1354,17 +1353,22 @@ function showScreen(screenName) {
       leaderboard: "Рейтинг",
     };
     navTitle.textContent = titles[screenName] || "Habit Power";
+    progressBlock.style.display = "none";
   }
 
-  // Плавное исчезновение контента
-  container.style.opacity = "0";
-  container.style.transform = "translateY(10px)";
-  container.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+  // Сразу показываем загрузку, без промежуточного главного экрана
+  container.innerHTML = `
+    <div class="screen" style="text-align: center; padding: 50px;">
+      <div class="loading-spinner"></div>
+    </div>
+  `;
 
+  // Загружаем нужный экран
   setTimeout(() => {
     switch (screenName) {
       case "main":
         renderMainScreen(container);
+        updateTodayProgress();
         break;
       case "habits":
         renderHabitsScreen(container);
@@ -1379,24 +1383,17 @@ function showScreen(screenName) {
         renderLeaderboardScreen(container);
         break;
     }
-
-    // Обновляем прогресс только если мы на главном экране
-    if (screenName === "main") {
-      updateTodayProgress();
-    }
-
-    // Плавное появление
-    setTimeout(() => {
-      container.style.opacity = "1";
-      container.style.transform = "translateY(0)";
-    }, 50);
-  }, 150);
+  }, 10);
 }
+
 window.showScreen = showScreen;
 
 // ===== УПРАВЛЕНИЕ ВКЛАДКАМИ =====
 
 function switchTab(tabName) {
+  // Если уже на этой вкладке, ничего не делаем
+  if (currentTab === tabName) return;
+
   currentTab = tabName;
   window.currentTab = currentTab;
 
@@ -1420,10 +1417,12 @@ function switchTab(tabName) {
     }
   }
 
-  // Плавное исчезновение
-  container.style.opacity = "0";
-  container.style.transform = "translateY(10px)";
-  container.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+  // Сразу показываем загрузку
+  container.innerHTML = `
+    <div class="screen" style="text-align: center; padding: 50px;">
+      <div class="loading-spinner"></div>
+    </div>
+  `;
 
   setTimeout(() => {
     if (tabName === "home") {
@@ -1447,13 +1446,7 @@ function switchTab(tabName) {
 
       renderProfileScreen(container);
     }
-
-    // Плавное появление
-    setTimeout(() => {
-      container.style.opacity = "1";
-      container.style.transform = "translateY(0)";
-    }, 50);
-  }, 150);
+  }, 10);
 }
 
 window.switchTab = switchTab;
@@ -1484,7 +1477,17 @@ async function initApp() {
     });
 
     await loadUserProfile();
-    switchTab("home");
+
+    // Просто показываем главный экран, без switchTab
+    renderMainScreen(document.getElementById("screenContainer"));
+    progressBlock.style.display = "block";
+    navBar.style.display = "flex";
+    navBack.style.display = "none";
+    navTitle.textContent = "Главное меню";
+    headerTitle.textContent = "Habit Power";
+
+    updateQuickStats(true);
+    updateTodayProgress();
 
     // Кнопка "Назад" в навигации
     document.getElementById("navBackBtn").addEventListener("click", () => {
@@ -1517,3 +1520,90 @@ async function initApp() {
 }
 
 document.addEventListener("DOMContentLoaded", initApp);
+
+async function initApp() {
+  if (!telegramId) {
+    showError("Не удалось получить ID пользователя");
+    return;
+  }
+
+  try {
+    // Добавляем проверку соединения с сервером
+    try {
+      const testResponse = await fetch(`${API_BASE}/api/user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telegram_id: telegramId }),
+      });
+
+      if (!testResponse.ok) {
+        throw new Error(`HTTP error! status: ${testResponse.status}`);
+      }
+
+      const userData = await testResponse.json();
+      console.log("Соединение с сервером установлено", userData);
+    } catch (fetchError) {
+      console.error("Ошибка соединения с сервером:", fetchError);
+      showError("Не удалось подключиться к серверу. Проверьте API_BASE");
+      return;
+    }
+
+    createEmojiGrid();
+
+    document.getElementById("tabHome").addEventListener("click", () => {
+      switchTab("home");
+    });
+
+    document.getElementById("tabProfile").addEventListener("click", () => {
+      switchTab("profile");
+    });
+
+    await loadUserProfile();
+
+    // Просто показываем главный экран
+    renderMainScreen(document.getElementById("screenContainer"));
+
+    const progressBlock = document.getElementById("progressBlock");
+    const navBar = document.getElementById("navBar");
+    const navBack = document.getElementById("navBackBtn");
+    const headerTitle = document.getElementById("mainHeaderTitle");
+
+    if (progressBlock) progressBlock.style.display = "block";
+    if (navBar) navBar.style.display = "flex";
+    if (navBack) navBack.style.display = "none";
+    if (navTitle) navTitle.textContent = "Главное меню";
+    if (headerTitle) headerTitle.textContent = "Habit Power";
+
+    updateQuickStats(true);
+    updateTodayProgress();
+
+    // Кнопка "Назад" в навигации
+    const navBackBtn = document.getElementById("navBackBtn");
+    if (navBackBtn) {
+      navBackBtn.addEventListener("click", () => {
+        if (currentTab === "profile") {
+          switchTab("home");
+        } else {
+          showScreen("main");
+        }
+      });
+    }
+
+    const closeEmojiPickerBtn = document.getElementById("closeEmojiPickerBtn");
+    if (closeEmojiPickerBtn) {
+      closeEmojiPickerBtn.addEventListener("click", closeEmojiPicker);
+    }
+
+    const emojiModal = document.getElementById("emojiPickerModal");
+    if (emojiModal) {
+      emojiModal.addEventListener("click", (e) => {
+        if (e.target === emojiModal) {
+          closeEmojiPicker();
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Ошибка при инициализации:", error);
+    showError("Ошибка при подключении к серверу: " + error.message);
+  }
+}

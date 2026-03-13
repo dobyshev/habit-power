@@ -738,72 +738,100 @@ async function toggleHabitCompletion(habitId) {
 
 window.toggleHabitCompletion = toggleHabitCompletion;
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ УДАЛЕНИЯ С ДИАГНОСТИКОЙ
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ УДАЛЕНИЯ С МАКСИМАЛЬНЫМ ЛОГИРОВАНИЕМ
 async function deleteHabit(habitId) {
   if (!confirm("Удалить привычку?")) return;
 
   try {
-    console.log("Удаляем привычку с ID:", habitId);
+    console.log("=== НАЧАЛО УДАЛЕНИЯ ПРИВЫЧКИ ===");
+    console.log("ID привычки:", habitId);
     console.log("Telegram ID пользователя:", telegramId);
+    console.log("Текущий экран:", currentScreen);
 
-    // Отправляем оба параметра, которые могут понадобиться серверу
-    const requestBody = {
-      habit_id: habitId,
-      telegram_id: telegramId,
-    };
+    // Пробуем разные форматы запроса
+    const formats = [
+      { habit_id: habitId },
+      { habit_id: habitId, telegram_id: telegramId },
+      { id: habitId },
+      { habitId: habitId },
+    ];
 
-    console.log("Отправляем запрос с телом:", JSON.stringify(requestBody));
+    let success = false;
+    let lastError = "";
 
-    const response = await fetch(`${API_BASE}/api/delete-habit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-    });
+    for (let i = 0; i < formats.length; i++) {
+      const format = formats[i];
+      console.log(`\n--- Попытка ${i + 1}:`, JSON.stringify(format));
 
-    console.log("Статус ответа:", response.status);
-    console.log("Заголовки ответа:", [...response.headers.entries()]);
+      try {
+        const response = await fetch(`${API_BASE}/api/delete-habit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(format),
+        });
 
-    // Пробуем получить ответ как текст
-    const responseText = await response.text();
-    console.log("Текст ответа:", responseText);
+        console.log(`Статус ответа для попытки ${i + 1}:`, response.status);
+        console.log("Заголовки ответа:", [...response.headers.entries()]);
 
-    // Пробуем распарсить как JSON, если получится
-    try {
-      const data = JSON.parse(responseText);
-      console.log("Распарсенные данные:", data);
+        // Пробуем получить ответ как текст
+        const responseText = await response.text();
+        console.log(`Текст ответа для попытки ${i + 1}:`, responseText);
 
-      if (response.ok) {
-        showSuccess("Привычка удалена");
+        if (response.ok) {
+          console.log(`✅ Успех с форматом ${i + 1}!`);
+          success = true;
 
-        if (currentScreen === "habits") {
-          await renderHabitsScreen(document.getElementById("screenContainer"));
+          // Пробуем распарсить ответ
+          try {
+            const data = JSON.parse(responseText);
+            console.log("Распарсенные данные:", data);
+            showSuccess(data.message || "Привычка удалена");
+          } catch (e) {
+            console.log("Ответ не в JSON формате, но успешный");
+            showSuccess("Привычка удалена");
+          }
+
+          break;
         } else {
-          await updateTodayProgress();
-          await updateQuickStats(true);
+          console.log(`❌ Ошибка с форматом ${i + 1}`);
+          lastError = `Попытка ${i + 1} (${JSON.stringify(format)}): ${response.status} - ${responseText}`;
         }
-      } else {
-        // Показываем детальную ошибку
-        const errorMessage =
-          data.detail || data.message || JSON.stringify(data);
-        showError(`Ошибка: ${errorMessage}`);
-      }
-    } catch (e) {
-      // Если не JSON, показываем как текст
-      if (response.ok) {
-        showSuccess("Привычка удалена");
-
-        if (currentScreen === "habits") {
-          await renderHabitsScreen(document.getElementById("screenContainer"));
-        } else {
-          await updateTodayProgress();
-          await updateQuickStats(true);
-        }
-      } else {
-        showError(`Ошибка сервера (${response.status}): ${responseText}`);
+      } catch (fetchError) {
+        console.error(`Ошибка fetch для попытки ${i + 1}:`, fetchError);
+        lastError = `Попытка ${i + 1}: ${fetchError.message}`;
       }
     }
+
+    console.log("\n=== РЕЗУЛЬТАТ УДАЛЕНИЯ ===");
+
+    if (success) {
+      console.log("✅ Привычка успешно удалена");
+
+      // Обновляем интерфейс
+      if (currentScreen === "habits") {
+        console.log("Обновляем экран привычек");
+        await renderHabitsScreen(document.getElementById("screenContainer"));
+      } else {
+        console.log("Обновляем прогресс и статистику");
+        await updateTodayProgress();
+        await updateQuickStats(true);
+      }
+    } else {
+      console.log("❌ Не удалось удалить привычку");
+      console.log("Последняя ошибка:", lastError);
+      showError(`Ошибка удаления: ${lastError}`);
+
+      // Отправляем диагностическую информацию в консоль
+      console.log("Для отладки:");
+      console.log("- ID привычки:", habitId);
+      console.log("- Telegram ID:", telegramId);
+      console.log("- API Base:", API_BASE);
+    }
   } catch (error) {
-    console.error("Ошибка удаления:", error);
+    console.error("Критическая ошибка в функции deleteHabit:", error);
     showError("Не удалось удалить привычку: " + error.message);
   }
 }

@@ -353,14 +353,26 @@ async def add_habit(habit_data: HabitCreate, db: Session = Depends(get_db)):
 @app.post("/api/delete-habit")
 async def delete_habit(habit_data: HabitDelete, db: Session = Depends(get_db)):
     """Удаляет привычку"""
-    habit = db.query(Habit).filter(Habit.id == habit_data.habit_id).first()
-    if not habit:
-        raise HTTPException(status_code=404, detail="Habit not found")
+    try:
+        print(f"Получен запрос на удаление: habit_id={habit_data.habit_id}")
 
-    db.delete(habit)
-    db.commit()
+        habit = db.query(Habit).filter(Habit.id == habit_data.habit_id).first()
+        if not habit:
+            print(f"Привычка с id {habit_data.habit_id} не найдена")
+            raise HTTPException(status_code=404, detail="Habit not found")
 
-    return {"status": "success"}
+        print(f"Найдена привычка: {habit.name}, удаляем...")
+        db.delete(habit)
+        db.commit()
+        print("Привычка успешно удалена")
+
+        return {"status": "success", "message": "Habit deleted"}
+    except Exception as e:
+        print(f"Ошибка при удалении: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/complete-habit", response_model=HabitCompleteResponse)

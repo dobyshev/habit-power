@@ -81,6 +81,11 @@ window.currentTab = currentTab;
 // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 
 function showError(message) {
+  // Если пришел объект, преобразуем в строку
+  if (typeof message === "object") {
+    message = JSON.stringify(message);
+  }
+
   const existingErrors = document.querySelectorAll(".error-message");
   existingErrors.forEach((error) => error.remove());
 
@@ -320,7 +325,7 @@ async function saveUserProfile(username, emoji) {
   }
 }
 
-// ===== ФУНКЦИЯ ОТРИСОВКИ ПРОФИЛЯ =====
+// ===== ФУНКЦИЯ ОТРИСОВКИ ПРОФИЛЯ (ИСПРАВЛЕННАЯ) =====
 
 function renderProfileScreen(container) {
   const displayName =
@@ -446,13 +451,6 @@ function renderProfileScreen(container) {
     const nameChanged = newName !== currentName;
     const emojiChanged = profileEmoji !== currentEmoji;
 
-    console.log("Проверка изменений:", {
-      nameChanged,
-      emojiChanged,
-      profileEmoji,
-      currentEmoji,
-    });
-
     if (!nameChanged && !emojiChanged) {
       saveBtn.disabled = true;
       statusDiv.textContent = "";
@@ -508,7 +506,7 @@ function renderProfileScreen(container) {
   checkForChanges();
 }
 
-// ===== ФУНКЦИИ ДЛЯ БЫСТРОЙ СТАТИСТИКИ (С КЭШИРОВАНИЕМ) =====
+// ===== ФУНКЦИИ ДЛЯ БЫСТРОЙ СТАТИСТИКИ =====
 
 function showQuickStatsSkeleton() {
   const statsGrid = document.getElementById("quickStatsGrid");
@@ -546,7 +544,6 @@ async function updateQuickStats(force = false) {
 
   const now = Date.now();
   if (!force && now - lastStatsUpdate < STATS_UPDATE_INTERVAL) {
-    console.log("Статистика не требует обновления");
     return;
   }
 
@@ -748,49 +745,22 @@ async function deleteHabit(habitId) {
   try {
     console.log("Удаляем привычку с ID:", habitId);
 
-    // Пробуем первый вариант - отправляем как habitId
     const response = await fetch(`${API_BASE}/api/delete-habit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ habitId: habitId }),
+      body: JSON.stringify({ habit_id: habitId }), // ИСПРАВЛЕНО: habit_id вместо habitId
     });
 
-    console.log("Статус ответа:", response.status);
-
-    const responseText = await response.text();
-    console.log("Текст ответа:", responseText);
-
     let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      console.error("Не удалось распарсить JSON:", responseText);
-      showError(`Ошибка сервера: ${responseText}`);
-      return;
-    }
+    const contentType = response.headers.get("content-type");
 
-    if (response.ok) {
-      showSuccess("Привычка удалена");
-
-      // Обновляем экран в зависимости от текущего
-      if (currentScreen === "habits") {
-        await renderHabitsScreen(document.getElementById("screenContainer"));
-      } else {
-        // Если не на экране привычек, просто обновляем данные
-        await updateTodayProgress();
-        await updateQuickStats(true);
-      }
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
     } else {
-      // Если первый вариант не сработал, пробуем второй вариант - habit_id
-      console.log("Первый вариант не сработал, пробуем habit_id");
+      const text = await response.text();
+      console.log("Текстовый ответ:", text);
 
-      const response2 = await fetch(`${API_BASE}/api/delete-habit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ habit_id: habitId }),
-      });
-
-      if (response2.ok) {
+      if (response.ok) {
         showSuccess("Привычка удалена");
 
         if (currentScreen === "habits") {
@@ -799,17 +769,31 @@ async function deleteHabit(habitId) {
           await updateTodayProgress();
           await updateQuickStats(true);
         }
+        return;
       } else {
-        const errorText = await response2.text();
-        console.error("Ошибка удаления:", errorText);
-        showError(data.detail || "Ошибка при удалении");
+        showError(text || "Ошибка при удалении");
+        return;
       }
+    }
+
+    if (response.ok) {
+      showSuccess("Привычка удалена");
+
+      if (currentScreen === "habits") {
+        await renderHabitsScreen(document.getElementById("screenContainer"));
+      } else {
+        await updateTodayProgress();
+        await updateQuickStats(true);
+      }
+    } else {
+      showError(data.detail || data.message || "Ошибка при удалении");
     }
   } catch (error) {
     console.error("Ошибка удаления:", error);
-    showError("Не удалось удалить привычку: " + error.message);
+    showError("Не удалось удалить привычку");
   }
 }
+
 window.deleteHabit = deleteHabit;
 
 async function createHabit() {
@@ -857,7 +841,7 @@ async function createHabit() {
 
 window.createHabit = createHabit;
 
-// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ ГЛАВНОГО ЭКРАНА (БЕЗ НАПОМИНАНИЙ) =====
+// ===== ГЛАВНЫЙ ЭКРАН =====
 
 function renderMainScreen(container) {
   fetch(`${API_BASE}/api/habits/${telegramId}`)
@@ -867,7 +851,6 @@ function renderMainScreen(container) {
       const completedToday = habits.filter((h) => h.completed_today).length;
       const incompleteCount = totalHabits - completedToday;
 
-      // Только 4 блока в сетке 2x2
       const menuItems = [
         {
           id: "habits",
@@ -1457,9 +1440,9 @@ function showScreen(screenName) {
       stats: "Статистика",
       create: "Создать привычку",
       leaderboard: "Рейтинг",
-      profile: "Мой профиль",
+      profile: "", // Убираем заголовок для профиля
     };
-    navTitle.textContent = titles[screenName] || "Habit Power";
+    navTitle.textContent = titles[screenName] || "";
     progressBlock.style.display = "none";
   }
 
@@ -1532,13 +1515,10 @@ function switchTab(tabName) {
 
   setTimeout(() => {
     if (tabName === "home") {
-      // На главной вкладке показываем прогресс и навигацию
       progressBlock.style.display = "block";
       navBar.style.display = "flex";
       navBack.style.display = "none";
       navTitle.textContent = "Главное меню";
-
-      // Убираем текст Habit Power из верхнего заголовка
       headerTitle.textContent = "";
       headerTitle.classList.remove("profile-header");
 
@@ -1546,15 +1526,12 @@ function switchTab(tabName) {
       updateQuickStats(true);
       updateTodayProgress();
     } else {
-      // В профиле
       progressBlock.style.display = "none";
       navBar.style.display = "flex";
       navBack.style.display = "none";
-      navTitle.textContent = "";
-
-      // Делаем заголовок "Мой профиль" большим и красивым
-      headerTitle.textContent = "Мой профиль";
-      headerTitle.classList.add("profile-header");
+      navTitle.textContent = ""; // Убираем текст в навигации
+      headerTitle.textContent = ""; // Убираем "Мой профиль" из верхнего заголовка
+      headerTitle.classList.remove("profile-header");
 
       renderProfileScreen(container);
     }
@@ -1602,7 +1579,6 @@ async function initApp() {
     if (navBack) navBack.style.display = "none";
     if (navTitle) navTitle.textContent = "Главное меню";
 
-    // Убираем текст Habit Power при загрузке
     if (headerTitle) {
       headerTitle.textContent = "";
       headerTitle.classList.remove("profile-header");

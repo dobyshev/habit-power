@@ -72,12 +72,6 @@ let nameCheckTimeout = null;
 let lastStatsUpdate = 0;
 const STATS_UPDATE_INTERVAL = 60000; // 1 минута
 
-// Для напоминаний
-let reminders = [];
-let timePickerCallback = null;
-window.selectedHour = "08";
-window.selectedMinute = "00";
-
 window.telegramId = telegramId;
 window.API_BASE = API_BASE;
 window.selectedEmoji = selectedEmoji;
@@ -747,29 +741,75 @@ async function toggleHabitCompletion(habitId) {
 
 window.toggleHabitCompletion = toggleHabitCompletion;
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ УДАЛЕНИЯ
 async function deleteHabit(habitId) {
   if (!confirm("Удалить привычку?")) return;
 
   try {
+    console.log("Удаляем привычку с ID:", habitId);
+
+    // Пробуем первый вариант - отправляем как habitId
     const response = await fetch(`${API_BASE}/api/delete-habit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ habit_id: habitId }),
+      body: JSON.stringify({ habitId: habitId }),
     });
 
+    console.log("Статус ответа:", response.status);
+
+    const responseText = await response.text();
+    console.log("Текст ответа:", responseText);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Не удалось распарсить JSON:", responseText);
+      showError(`Ошибка сервера: ${responseText}`);
+      return;
+    }
+
     if (response.ok) {
+      showSuccess("Привычка удалена");
+
+      // Обновляем экран в зависимости от текущего
       if (currentScreen === "habits") {
         await renderHabitsScreen(document.getElementById("screenContainer"));
+      } else {
+        // Если не на экране привычек, просто обновляем данные
+        await updateTodayProgress();
+        await updateQuickStats(true);
       }
-      await updateTodayProgress();
-      await updateQuickStats(true);
+    } else {
+      // Если первый вариант не сработал, пробуем второй вариант - habit_id
+      console.log("Первый вариант не сработал, пробуем habit_id");
+
+      const response2 = await fetch(`${API_BASE}/api/delete-habit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ habit_id: habitId }),
+      });
+
+      if (response2.ok) {
+        showSuccess("Привычка удалена");
+
+        if (currentScreen === "habits") {
+          await renderHabitsScreen(document.getElementById("screenContainer"));
+        } else {
+          await updateTodayProgress();
+          await updateQuickStats(true);
+        }
+      } else {
+        const errorText = await response2.text();
+        console.error("Ошибка удаления:", errorText);
+        showError(data.detail || "Ошибка при удалении");
+      }
     }
   } catch (error) {
     console.error("Ошибка удаления:", error);
-    showError("Не удалось удалить привычку");
+    showError("Не удалось удалить привычку: " + error.message);
   }
 }
-
 window.deleteHabit = deleteHabit;
 
 async function createHabit() {
@@ -817,359 +857,7 @@ async function createHabit() {
 
 window.createHabit = createHabit;
 
-// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С НАПОМИНАНИЯМИ =====
-
-async function loadReminders() {
-  if (!telegramId) return [];
-
-  try {
-    const response = await fetch(`${API_BASE}/api/reminders/${telegramId}`);
-    if (response.ok) {
-      reminders = await response.json();
-      return reminders;
-    }
-  } catch (error) {
-    console.error("Ошибка загрузки напоминаний:", error);
-  }
-  return [];
-}
-
-async function addReminder(habitId, time) {
-  try {
-    const response = await fetch(`${API_BASE}/api/add-reminder`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        telegram_id: telegramId,
-        habit_id: habitId,
-        reminder_time: time,
-        is_active: true,
-      }),
-    });
-
-    if (response.ok) {
-      await loadReminders();
-      return true;
-    }
-  } catch (error) {
-    console.error("Ошибка добавления напоминания:", error);
-  }
-  return false;
-}
-
-async function updateReminder(reminderId, time, isActive) {
-  try {
-    const response = await fetch(`${API_BASE}/api/update-reminder`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reminder_id: reminderId,
-        reminder_time: time,
-        is_active: isActive,
-      }),
-    });
-
-    if (response.ok) {
-      await loadReminders();
-      return true;
-    }
-  } catch (error) {
-    console.error("Ошибка обновления напоминания:", error);
-  }
-  return false;
-}
-
-// ===== ОБНОВЛЕННЫЙ ФУНКЦИЯ ВЫБОРА ВРЕМЕНИ =====
-
-function showTimePicker(currentTime, callback) {
-  timePickerCallback = callback;
-
-  const hours = Array.from({ length: 24 }, (_, i) =>
-    i.toString().padStart(2, "0"),
-  );
-  const minutes = Array.from({ length: 60 }, (_, i) =>
-    i.toString().padStart(2, "0"),
-  );
-
-  const [currentHour = "08", currentMinute = "00"] = currentTime
-    ? currentTime.split(":")
-    : ["08", "00"];
-
-  window.selectedHour = currentHour;
-  window.selectedMinute = currentMinute;
-
-  const modalHtml = `
-    <div class="modal show" id="timePickerModal" style="display: flex;">
-      <div class="modal-content time-picker-content">
-        <div class="modal-header">
-          <h2>Выберите время</h2>
-          <button class="close-btn" onclick="document.getElementById('timePickerModal').remove()">&times;</button>
-        </div>
-        <div class="time-picker-grid">
-          <div class="time-picker-column">
-            <div class="time-picker-label">Часы</div>
-            <div class="time-picker-scroll">
-              ${hours
-                .map(
-                  (h) => `
-                <div class="time-picker-item ${h === currentHour ? "selected" : ""}" onclick="window.selectHour('${h}')">${h}</div>
-              `,
-                )
-                .join("")}
-            </div>
-          </div>
-          <div class="time-picker-column">
-            <div class="time-picker-label">Минуты</div>
-            <div class="time-picker-scroll minutes-scroll">
-              ${minutes
-                .map(
-                  (m) => `
-                <div class="time-picker-item ${m === currentMinute ? "selected" : ""}" onclick="window.selectMinute('${m}')">${m}</div>
-              `,
-                )
-                .join("")}
-            </div>
-          </div>
-        </div>
-        <div class="time-picker-footer">
-          <button class="time-picker-cancel" onclick="document.getElementById('timePickerModal').remove()">Отмена</button>
-          <button class="time-picker-confirm" onclick="window.confirmTime()">Подтвердить</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  const oldModal = document.getElementById("timePickerModal");
-  if (oldModal) oldModal.remove();
-
-  document.body.insertAdjacentHTML("beforeend", modalHtml);
-
-  const modal = document.getElementById("timePickerModal");
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) {
-      modal.remove();
-    }
-  });
-}
-
-window.selectHour = function (hour) {
-  window.selectedHour = hour;
-  document.querySelectorAll(".time-picker-item").forEach((el) => {
-    if (
-      el.textContent === hour &&
-      el.closest(".time-picker-column")?.querySelector(".time-picker-label")
-        ?.textContent === "Часы"
-    ) {
-      el.classList.add("selected");
-    } else if (
-      el.closest(".time-picker-column")?.querySelector(".time-picker-label")
-        ?.textContent === "Часы"
-    ) {
-      el.classList.remove("selected");
-    }
-  });
-};
-
-window.selectMinute = function (minute) {
-  window.selectedMinute = minute;
-  document.querySelectorAll(".time-picker-item").forEach((el) => {
-    if (
-      el.textContent === minute &&
-      el.closest(".time-picker-column")?.querySelector(".time-picker-label")
-        ?.textContent === "Минуты"
-    ) {
-      el.classList.add("selected");
-    } else if (
-      el.closest(".time-picker-column")?.querySelector(".time-picker-label")
-        ?.textContent === "Минуты"
-    ) {
-      el.classList.remove("selected");
-    }
-  });
-};
-
-window.confirmTime = function () {
-  const time = `${window.selectedHour}:${window.selectedMinute}`;
-  if (timePickerCallback) {
-    timePickerCallback(time);
-  }
-  document.getElementById("timePickerModal")?.remove();
-};
-
-// ===== ЭКРАН НАПОМИНАНИЙ =====
-
-async function renderRemindersScreen(container) {
-  try {
-    const [habitsResponse, remindersData] = await Promise.all([
-      fetch(`${API_BASE}/api/habits/${telegramId}`),
-      loadReminders(),
-    ]);
-
-    const habits = await habitsResponse.json();
-
-    const remindersMap = {};
-    remindersData.forEach((r) => {
-      remindersMap[r.habit_id] = r;
-    });
-
-    const schedule = {};
-    remindersData
-      .filter((r) => r.is_active)
-      .forEach((r) => {
-        if (!schedule[r.reminder_time]) {
-          schedule[r.reminder_time] = [];
-        }
-        schedule[r.reminder_time].push(r);
-      });
-
-    const html = `
-      <div class="screen reminders-screen">
-        <h2 class="reminders-main-title">Напоминания</h2>
-        <p class="reminders-subtitle">Настройте время уведомлений</p>
-        
-        <div class="reminders-info-card">
-          <div class="reminders-info-icon">🤖</div>
-          <div class="reminders-info-text">
-            <h3>Telegram напоминания</h3>
-            <p>Бот будет отправлять вам напоминания в Telegram каждый день в указанное время. Установите время для каждой привычки.</p>
-          </div>
-        </div>
-        
-        <div class="reminders-list">
-          <h3 class="reminders-list-title">Настройки напоминаний</h3>
-          
-          ${
-            habits.length === 0
-              ? `
-            <div class="empty-state">
-              ✨ Сначала создайте привычки
-            </div>
-          `
-              : `
-            ${habits
-              .map((habit) => {
-                const reminder = remindersMap[habit.id];
-                const time = reminder ? reminder.reminder_time : "08:00";
-                const isActive = reminder ? reminder.is_active : false;
-
-                return `
-                <div class="reminder-item" data-habit-id="${habit.id}" data-reminder-id="${reminder?.id || ""}">
-                  <div class="reminder-item-header">
-                    <div class="reminder-item-icon">${habit.emoji || "📋"}</div>
-                    <div class="reminder-item-info">
-                      <div class="reminder-item-name">${habit.name}</div>
-                      <div class="reminder-item-time" onclick="window.editReminderTime(${habit.id}, '${time}')">
-                        📅 Напоминание в <span class="reminder-time-value">${time}</span>
-                      </div>
-                    </div>
-                    <label class="reminder-switch">
-                      <input type="checkbox" ${isActive ? "checked" : ""} onchange="window.toggleReminder(${habit.id}, this.checked)">
-                      <span class="reminder-slider"></span>
-                    </label>
-                  </div>
-                  ${
-                    isActive
-                      ? `
-                    <div class="reminder-active-badge">
-                      <span class="active-indicator">🟢</span> Активно
-                    </div>
-                  `
-                      : ""
-                  }
-                </div>
-              `;
-              })
-              .join("")}
-          `
-          }
-        </div>
-        
-        ${
-          Object.keys(schedule).length > 0
-            ? `
-          <div class="reminders-schedule">
-            <h3 class="reminders-schedule-title">Расписание на день</h3>
-            <div class="schedule-list">
-              ${Object.keys(schedule)
-                .sort()
-                .map(
-                  (time) => `
-                <div class="schedule-item">
-                  <div class="schedule-time">${time}</div>
-                  <div class="schedule-habits">
-                    ${schedule[time]
-                      .map(
-                        (r) => `
-                      <div class="schedule-habit">
-                        <span class="schedule-emoji">${r.habit_emoji}</span>
-                        <span class="schedule-name">${r.habit_name}</span>
-                      </div>
-                    `,
-                      )
-                      .join("")}
-                  </div>
-                </div>
-              `,
-                )
-                .join("")}
-            </div>
-          </div>
-        `
-            : ""
-        }
-      </div>
-    `;
-
-    container.innerHTML = html;
-  } catch (error) {
-    console.error("Ошибка загрузки напоминаний:", error);
-    container.innerHTML = `
-      <div class="screen">
-        <div class="error-message">
-          Не удалось загрузить напоминания
-        </div>
-      </div>
-    `;
-  }
-}
-
-window.toggleReminder = async function (habitId, isActive) {
-  const reminderItem = document.querySelector(`[data-habit-id="${habitId}"]`);
-  const reminderId = reminderItem?.dataset.reminderId;
-  const timeElement = reminderItem?.querySelector(".reminder-time-value");
-  const time = timeElement ? timeElement.textContent : "08:00";
-
-  if (reminderId) {
-    await updateReminder(parseInt(reminderId), time, isActive);
-  } else {
-    await addReminder(habitId, time);
-  }
-
-  const container = document.getElementById("screenContainer");
-  renderRemindersScreen(container);
-};
-
-window.editReminderTime = function (habitId, currentTime) {
-  showTimePicker(currentTime, async (newTime) => {
-    const reminderItem = document.querySelector(`[data-habit-id="${habitId}"]`);
-    const reminderId = reminderItem?.dataset.reminderId;
-    const timeElement = reminderItem?.querySelector(".reminder-time-value");
-    const checkbox = reminderItem?.querySelector('input[type="checkbox"]');
-    const isActive = checkbox ? checkbox.checked : false;
-
-    if (timeElement) {
-      timeElement.textContent = newTime;
-    }
-
-    if (reminderId) {
-      await updateReminder(parseInt(reminderId), newTime, isActive);
-    } else {
-      await addReminder(habitId, newTime);
-    }
-  });
-};
-
-// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ ГЛАВНОГО ЭКРАНА =====
+// ===== ОБНОВЛЕННАЯ ФУНКЦИЯ ГЛАВНОГО ЭКРАНА (БЕЗ НАПОМИНАНИЙ) =====
 
 function renderMainScreen(container) {
   fetch(`${API_BASE}/api/habits/${telegramId}`)
@@ -1179,8 +867,8 @@ function renderMainScreen(container) {
       const completedToday = habits.filter((h) => h.completed_today).length;
       const incompleteCount = totalHabits - completedToday;
 
-      // Первая строка - два блока
-      const firstRowItems = [
+      // Только 4 блока в сетке 2x2
+      const menuItems = [
         {
           id: "habits",
           icon: "📋",
@@ -1196,22 +884,6 @@ function renderMainScreen(container) {
           desc: "Добавить новую",
           badge: null,
         },
-      ];
-
-      // Вторая строка - один длинный блок (Напоминания)
-      const secondRowItems = [
-        {
-          id: "reminders",
-          icon: "⏰",
-          title: "Напоминания",
-          desc: "Настройка уведомлений",
-          badge: null,
-          isWide: true,
-        },
-      ];
-
-      // Третья строка - два блока
-      const thirdRowItems = [
         {
           id: "stats",
           icon: "📊",
@@ -1230,11 +902,10 @@ function renderMainScreen(container) {
 
       let html = `
         <div class="screen">
-          <!-- Первая строка: 2 блока -->
           <div class="menu-grid">
       `;
 
-      firstRowItems.forEach((item) => {
+      menuItems.forEach((item) => {
         html += `
           <div class="menu-card" onclick="window.showScreen('${item.id}')">
             <div class="menu-card-title">
@@ -1243,36 +914,6 @@ function renderMainScreen(container) {
             </div>
             <div class="menu-card-desc">${item.desc}</div>
             ${item.badge ? `<div class="menu-card-badge ${item.badgeColor}">${item.badge}</div>` : ""}
-          </div>
-        `;
-      });
-
-      html += `
-          </div>
-          
-          <!-- Вторая строка: длинный блок (Напоминания) с одинаковыми отступами -->
-          <div class="wide-menu-card" onclick="window.showScreen('reminders')">
-            <div class="wide-menu-card-content">
-              <span class="wide-menu-card-icon">⏰</span>
-              <div class="wide-menu-card-text">
-                <div class="wide-menu-card-title">Напоминания</div>
-                <div class="wide-menu-card-desc">Настройка уведомлений</div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Третья строка: 2 блока -->
-          <div class="menu-grid">
-      `;
-
-      thirdRowItems.forEach((item) => {
-        html += `
-          <div class="menu-card" onclick="window.showScreen('${item.id}')">
-            <div class="menu-card-title">
-              <span class="menu-card-icon">${item.icon}</span>
-              <span>${item.title}</span>
-            </div>
-            <div class="menu-card-desc">${item.desc}</div>
           </div>
         `;
       });
@@ -1292,7 +933,7 @@ function renderMainScreen(container) {
     .catch((error) => {
       console.error("Ошибка загрузки привычек:", error);
 
-      const firstRowItems = [
+      const fallbackItems = [
         {
           id: "habits",
           icon: "📋",
@@ -1307,9 +948,6 @@ function renderMainScreen(container) {
           desc: "Добавить новую",
           badge: null,
         },
-      ];
-
-      const thirdRowItems = [
         {
           id: "stats",
           icon: "📊",
@@ -1328,41 +966,10 @@ function renderMainScreen(container) {
 
       let html = `
         <div class="screen">
-          <!-- Первая строка: 2 блока -->
           <div class="menu-grid">
       `;
 
-      firstRowItems.forEach((item) => {
-        html += `
-          <div class="menu-card" onclick="window.showScreen('${item.id}')">
-            <div class="menu-card-title">
-              <span class="menu-card-icon">${item.icon}</span>
-              <span>${item.title}</span>
-            </div>
-            <div class="menu-card-desc">${item.desc}</div>
-          </div>
-        `;
-      });
-
-      html += `
-          </div>
-          
-          <!-- Вторая строка: длинный блок (Напоминания) с одинаковыми отступами -->
-          <div class="wide-menu-card" onclick="window.showScreen('reminders')">
-            <div class="wide-menu-card-content">
-              <span class="wide-menu-card-icon">⏰</span>
-              <div class="wide-menu-card-text">
-                <div class="wide-menu-card-title">Напоминания</div>
-                <div class="wide-menu-card-desc">Настройка уведомлений</div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Третья строка: 2 блока -->
-          <div class="menu-grid">
-      `;
-
-      thirdRowItems.forEach((item) => {
+      fallbackItems.forEach((item) => {
         html += `
           <div class="menu-card" onclick="window.showScreen('${item.id}')">
             <div class="menu-card-title">
@@ -1839,11 +1446,10 @@ function showScreen(screenName) {
     navTitle.textContent = "Главное меню";
     progressBlock.style.display = "block";
   } else {
-    // В разделах показываем кнопку назад, кроме профиля
     if (screenName === "profile") {
-      navBack.style.display = "none"; // В профиле кнопка назад не нужна
+      navBack.style.display = "none";
     } else {
-      navBack.style.display = "block"; // В остальных разделах показываем
+      navBack.style.display = "block";
     }
 
     const titles = {
@@ -1851,8 +1457,7 @@ function showScreen(screenName) {
       stats: "Статистика",
       create: "Создать привычку",
       leaderboard: "Рейтинг",
-      reminders: "Напоминания",
-      profile: "Мой профиль", // Добавляем профиль
+      profile: "Мой профиль",
     };
     navTitle.textContent = titles[screenName] || "Habit Power";
     progressBlock.style.display = "none";
@@ -1881,9 +1486,6 @@ function showScreen(screenName) {
         break;
       case "leaderboard":
         renderLeaderboardScreen(container);
-        break;
-      case "reminders":
-        renderRemindersScreen(container);
         break;
       case "profile":
         renderProfileScreen(container);

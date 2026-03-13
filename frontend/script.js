@@ -738,27 +738,39 @@ async function toggleHabitCompletion(habitId) {
 
 window.toggleHabitCompletion = toggleHabitCompletion;
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ УДАЛЕНИЯ
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ УДАЛЕНИЯ С ДИАГНОСТИКОЙ
 async function deleteHabit(habitId) {
   if (!confirm("Удалить привычку?")) return;
 
   try {
     console.log("Удаляем привычку с ID:", habitId);
+    console.log("Telegram ID пользователя:", telegramId);
+
+    // Отправляем оба параметра, которые могут понадобиться серверу
+    const requestBody = {
+      habit_id: habitId,
+      telegram_id: telegramId,
+    };
+
+    console.log("Отправляем запрос с телом:", JSON.stringify(requestBody));
 
     const response = await fetch(`${API_BASE}/api/delete-habit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ habit_id: habitId }), // ИСПРАВЛЕНО: habit_id вместо habitId
+      body: JSON.stringify(requestBody),
     });
 
-    let data;
-    const contentType = response.headers.get("content-type");
+    console.log("Статус ответа:", response.status);
+    console.log("Заголовки ответа:", [...response.headers.entries()]);
 
-    if (contentType && contentType.includes("application/json")) {
-      data = await response.json();
-    } else {
-      const text = await response.text();
-      console.log("Текстовый ответ:", text);
+    // Пробуем получить ответ как текст
+    const responseText = await response.text();
+    console.log("Текст ответа:", responseText);
+
+    // Пробуем распарсить как JSON, если получится
+    try {
+      const data = JSON.parse(responseText);
+      console.log("Распарсенные данные:", data);
 
       if (response.ok) {
         showSuccess("Привычка удалена");
@@ -769,31 +781,32 @@ async function deleteHabit(habitId) {
           await updateTodayProgress();
           await updateQuickStats(true);
         }
-        return;
       } else {
-        showError(text || "Ошибка при удалении");
-        return;
+        // Показываем детальную ошибку
+        const errorMessage =
+          data.detail || data.message || JSON.stringify(data);
+        showError(`Ошибка: ${errorMessage}`);
       }
-    }
+    } catch (e) {
+      // Если не JSON, показываем как текст
+      if (response.ok) {
+        showSuccess("Привычка удалена");
 
-    if (response.ok) {
-      showSuccess("Привычка удалена");
-
-      if (currentScreen === "habits") {
-        await renderHabitsScreen(document.getElementById("screenContainer"));
+        if (currentScreen === "habits") {
+          await renderHabitsScreen(document.getElementById("screenContainer"));
+        } else {
+          await updateTodayProgress();
+          await updateQuickStats(true);
+        }
       } else {
-        await updateTodayProgress();
-        await updateQuickStats(true);
+        showError(`Ошибка сервера (${response.status}): ${responseText}`);
       }
-    } else {
-      showError(data.detail || data.message || "Ошибка при удалении");
     }
   } catch (error) {
     console.error("Ошибка удаления:", error);
-    showError("Не удалось удалить привычку");
+    showError("Не удалось удалить привычку: " + error.message);
   }
 }
-
 window.deleteHabit = deleteHabit;
 
 async function createHabit() {
